@@ -69,6 +69,7 @@ npx vercel
 ## Endpoints
 
 - `POST /api/login`
+- `POST /api/logout`
 - `GET /api/athletes`
 - `POST /api/athletes`
 - `PUT /api/athletes` (incrementa `goals`, `assists` ou `games`)

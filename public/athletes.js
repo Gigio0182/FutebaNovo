@@ -1,13 +1,8 @@
-const TOKEN_KEY = 'app_futeba_token';
 const athleteForm = document.getElementById('athlete-form');
 const athleteNameInput = document.getElementById('athlete-name');
 const athletesBody = document.getElementById('athletes-body');
 const statusEl = document.getElementById('status');
 const logoutBtn = document.getElementById('logout-btn');
-
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || '';
-}
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -19,17 +14,10 @@ function redirectToLogin() {
 }
 
 async function request(url, options = {}) {
-  const token = getToken();
-
-  if (!token) {
-    redirectToLogin();
-    throw new Error('Sessao ausente.');
-  }
-
   const response = await fetch(url, {
+    credentials: 'same-origin',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
       ...(options.headers || {})
     },
     ...options
@@ -37,7 +25,6 @@ async function request(url, options = {}) {
 
   const data = await response.json();
   if (response.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
     redirectToLogin();
     throw new Error('Sessao expirada.');
   }
@@ -122,13 +109,12 @@ athletesBody.addEventListener('click', async (event) => {
   }
 });
 
-logoutBtn.addEventListener('click', () => {
-  localStorage.removeItem(TOKEN_KEY);
-  redirectToLogin();
+logoutBtn.addEventListener('click', async () => {
+  try {
+    await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+  } finally {
+    redirectToLogin();
+  }
 });
 
-if (!getToken()) {
-  redirectToLogin();
-} else {
-  loadAthletes().catch((error) => setStatus(error.message, true));
-}
+loadAthletes().catch((error) => setStatus(error.message, true));

@@ -21,6 +21,10 @@ module.exports = async (req, res) => {
     }
 
     const token = issueToken();
+    res.setHeader(
+      'Set-Cookie',
+      `auth_token=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`
+    );
     sendJson(res, 200, { token });
   } catch (error) {
     sendJson(res, 500, { error: error.message });

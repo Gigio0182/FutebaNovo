@@ -81,8 +81,32 @@ function getBearerToken(req) {
   return header.slice(7).trim();
 }
 
+function parseCookies(req) {
+  const raw = req.headers.cookie || '';
+  if (!raw) {
+    return {};
+  }
+
+  return raw.split(';').reduce((acc, part) => {
+    const idx = part.indexOf('=');
+    if (idx < 0) {
+      return acc;
+    }
+
+    const key = part.slice(0, idx).trim();
+    const value = decodeURIComponent(part.slice(idx + 1).trim());
+    acc[key] = value;
+    return acc;
+  }, {});
+}
+
+function getCookieToken(req) {
+  const cookies = parseCookies(req);
+  return cookies.auth_token || null;
+}
+
 function requireAuth(req, res) {
-  const token = getBearerToken(req);
+  const token = getBearerToken(req) || getCookieToken(req);
   if (!verifyToken(token)) {
     sendJson(res, 401, { error: 'Nao autorizado. Faca login primeiro.' });
     return false;
@@ -91,6 +115,7 @@ function requireAuth(req, res) {
 }
 
 module.exports = {
+  getCookieToken,
   issueToken,
   requireAuth,
   validatePassword
