@@ -1,6 +1,7 @@
 const { getDb } = require('./_lib/firebase');
 const { handleOptions, parseBody, sendJson } = require('./_lib/http');
 const { requireAuth } = require('./_lib/auth');
+const { getAthletesCollectionName } = require('./_lib/group');
 
 module.exports = async (req, res) => {
   if (handleOptions(req, res)) {
@@ -9,16 +10,14 @@ module.exports = async (req, res) => {
 
   try {
     const db = getDb();
+    const athletesCollection = db.collection(getAthletesCollectionName(req));
 
     if (req.method === 'GET') {
       if (!requireAuth(req, res)) {
         return;
       }
 
-      const snapshot = await db
-        .collection('athletes')
-        .orderBy('name', 'asc')
-        .get();
+      const snapshot = await athletesCollection.orderBy('name', 'asc').get();
 
       const athletes = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -42,7 +41,7 @@ module.exports = async (req, res) => {
         return;
       }
 
-      const created = await db.collection('athletes').add({
+      const created = await athletesCollection.add({
         name,
         goals: 0,
         assists: 0,
@@ -83,21 +82,15 @@ module.exports = async (req, res) => {
         return;
       }
 
-      const allowed = new Set(['goals', 'assists', 'games', 'mvp', 'worst']);
-      if (!allowed.has(field)) {
-        sendJson(res, 400, { error: 'Campo invalido para incremento.' });
-        return;
-      }
-
-      const docRef = db.collection('athletes').doc(id);
-      const currentSnap = await docRef.get();
-
-      if (!currentSnap.exists) {
-        sendJson(res, 404, { error: 'Atleta nao encontrado.' });
-        return;
-      }
-
       if (nextName && !field) {
+        const docRef = athletesCollection.doc(id);
+        const currentSnap = await docRef.get();
+
+        if (!currentSnap.exists) {
+          sendJson(res, 404, { error: 'Atleta nao encontrado.' });
+          return;
+        }
+
         await docRef.set(
           {
             name: nextName,
@@ -107,6 +100,20 @@ module.exports = async (req, res) => {
         );
 
         sendJson(res, 200, { ok: true, name: nextName });
+        return;
+      }
+
+      const allowed = new Set(['goals', 'assists', 'games', 'mvp', 'worst']);
+      if (!allowed.has(field)) {
+        sendJson(res, 400, { error: 'Campo invalido para incremento.' });
+        return;
+      }
+
+      const docRef = athletesCollection.doc(id);
+      const currentSnap = await docRef.get();
+
+      if (!currentSnap.exists) {
+        sendJson(res, 404, { error: 'Atleta nao encontrado.' });
         return;
       }
 

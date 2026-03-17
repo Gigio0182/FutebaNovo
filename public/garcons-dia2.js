@@ -9,7 +9,7 @@ function setStatus(message, isError = false) {
 
 async function loadBoard() {
   try {
-    const response = await fetch('/api/ranking');
+    const response = await fetch('/api/ranking?group=dia2');
     const data = await response.json();
 
     if (!response.ok) {

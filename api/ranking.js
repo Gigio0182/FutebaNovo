@@ -1,5 +1,6 @@
 const { getDb } = require('./_lib/firebase');
 const { handleOptions, sendJson } = require('./_lib/http');
+const { getAthletesCollectionName } = require('./_lib/group');
 
 module.exports = async (req, res) => {
   if (handleOptions(req, res)) {
@@ -14,7 +15,7 @@ module.exports = async (req, res) => {
   try {
     const db = getDb();
 
-    const athletesSnap = await db.collection('athletes').get();
+    const athletesSnap = await db.collection(getAthletesCollectionName(req)).get();
 
     const ranking = athletesSnap.docs
       .map((doc) => {

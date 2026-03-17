@@ -1,6 +1,26 @@
 {
   "routes": [
     {
+      "src": "^/dia2/?$",
+      "dest": "/index-dia2.html"
+    },
+    {
+      "src": "^/dia2/athletes/?$",
+      "dest": "/athletes-dia2.html"
+    },
+    {
+      "src": "^/dia2/ranking/?$",
+      "dest": "/ranking-dia2.html"
+    },
+    {
+      "src": "^/dia2/goleadores/?$",
+      "dest": "/goleadores-dia2.html"
+    },
+    {
+      "src": "^/dia2/garcons/?$",
+      "dest": "/garcons-dia2.html"
+    },
+    {
       "src": "^/$",
       "dest": "/index.html"
     },

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>App Futeba Dia 2 | Cadastro de Atletas</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>Cadastro de Atletas - Dia 2</h1>
+        <p>Cadastre atletas e incremente gols, assistencias e jogos do futebol dia 2.</p>
+        <div class="hero-actions">
+          <a class="btn secondary" href="/dia2/ranking">Ver Ranking</a>
+          <a class="btn secondary" href="/dia2/goleadores">Goleadores</a>
+          <a class="btn secondary" href="/dia2/garcons">Garcons</a>
+          <button id="logout-btn" class="btn" type="button">Sair</button>
+          <span id="sync-state" class="sync-pill"></span>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Novo atleta</h2>
+        <form id="athlete-form" class="grid-form">
+          <label>
+            Nome do atleta
+            <input id="athlete-name" required maxlength="60" />
+          </label>
+          <button class="btn" type="submit">Cadastrar</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Atletas cadastrados</h2>
+        <label class="search-row">
+          Buscar atleta por nome
+          <input id="athlete-search" type="search" placeholder="Digite o nome" />
+        </label>
+        <div id="athletes-list" class="athletes-list"></div>
+      </section>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script src="/athletes-dia2.js"></script>
+    <script src="/pwa.js"></script>
+  </body>
+</html>

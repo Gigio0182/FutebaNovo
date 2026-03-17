@@ -1,16 +1,26 @@
-const CACHE_NAME = 'app-futeba-v2';
+const CACHE_NAME = 'app-futeba-v3';
 const ASSETS = [
   '/',
+  '/dia2',
   '/athletes',
+  '/dia2/athletes',
   '/ranking',
+  '/dia2/ranking',
   '/goleadores',
+  '/dia2/goleadores',
   '/garcons',
+  '/dia2/garcons',
   '/style.css',
   '/login.js',
+  '/login-dia2.js',
   '/athletes.js',
+  '/athletes-dia2.js',
   '/ranking.js',
+  '/ranking-dia2.js',
   '/goleadores.js',
+  '/goleadores-dia2.js',
   '/garcons.js',
+  '/garcons-dia2.js',
   '/pwa.js',
   '/manifest.webmanifest',
   '/icon.svg'
@@ -63,7 +73,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request, '/'));
+    const fallbackPath = url.pathname.startsWith('/dia2') ? '/dia2' : '/';
+    event.respondWith(networkFirst(request, fallbackPath));
     return;
   }
 

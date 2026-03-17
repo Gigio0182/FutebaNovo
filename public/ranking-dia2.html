@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>App Futeba Dia 2 | Ranking dos craques da Volvo</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>Ranking dos craques da Volvo - Dia 2</h1>
+        <div class="hero-actions">
+          <a class="btn secondary" href="/dia2/goleadores">Goleadores</a>
+          <a class="btn secondary" href="/dia2/garcons">Garcons</a>
+        </div>
+      </header>
+
+      <section class="card">
+        <label class="search-row">
+          Buscar atleta por nome
+          <input id="ranking-search" type="search" placeholder="Digite o nome" />
+        </label>
+        <div id="ranking-list" class="ranking-list"></div>
+      </section>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script src="/ranking-dia2.js"></script>
+    <script src="/pwa.js"></script>
+  </body>
+</html>
