@@ -1,24 +1,24 @@
 {
   "routes": [
     {
-      "src": "^/dia2/?$",
-      "dest": "/index-dia2.html"
+      "src": "^/domingo/?$",
+      "dest": "/index-domingo.html"
     },
     {
-      "src": "^/dia2/athletes/?$",
-      "dest": "/athletes-dia2.html"
+      "src": "^/domingo/athletes/?$",
+      "dest": "/athletes-domingo.html"
     },
     {
-      "src": "^/dia2/ranking/?$",
-      "dest": "/ranking-dia2.html"
+      "src": "^/domingo/ranking/?$",
+      "dest": "/ranking-domingo.html"
     },
     {
-      "src": "^/dia2/goleadores/?$",
-      "dest": "/goleadores-dia2.html"
+      "src": "^/domingo/goleadores/?$",
+      "dest": "/goleadores-domingo.html"
     },
     {
-      "src": "^/dia2/garcons/?$",
-      "dest": "/garcons-dia2.html"
+      "src": "^/domingo/garcons/?$",
+      "dest": "/garcons-domingo.html"
     },
     {
       "src": "^/$",

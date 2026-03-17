@@ -1,6 +1,6 @@
 const rankingList = document.getElementById('ranking-list');
 const statusEl = document.getElementById('status');
-const onlyWithAssists = document.getElementById('only-with-assists');
+const onlyWithGoals = document.getElementById('only-with-goals');
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -9,27 +9,25 @@ function setStatus(message, isError = false) {
 
 async function loadBoard() {
   try {
-    const response = await fetch('/api/ranking?group=dia2');
+    const response = await fetch('/api/ranking?group=domingo');
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Erro ao carregar garcons.');
+      throw new Error(data.error || 'Erro ao carregar goleadores.');
     }
 
     const rows = (data.ranking || []).sort((a, b) => {
-      if (b.assists !== a.assists) return b.assists - a.assists;
+      if (b.goals !== a.goals) return b.goals - a.goals;
       return a.name.localeCompare(b.name, 'pt-BR');
     });
 
-    const filteredRows = onlyWithAssists.checked
-      ? rows.filter((row) => Number(row.assists || 0) > 0)
+    const filteredRows = onlyWithGoals.checked
+      ? rows.filter((row) => Number(row.goals || 0) > 0)
       : rows;
 
     rankingList.innerHTML = filteredRows
       .map((row, index) => {
         const currentPosition = index + 1;
-        const isTie =
-          index > 0 && Number(row.assists || 0) === Number(filteredRows[index - 1].assists || 0);
 
         let medalClass = '';
         if (currentPosition === 1) medalClass = 'row-gold';
@@ -42,8 +40,7 @@ async function loadBoard() {
               <span class="rank-pos">${currentPosition}</span>
               <div class="rank-name-meta">
                 <h3>${row.name}</h3>
-                ${isTie ? '<span class="tie-badge">EMPATE</span>' : ''}
-                <span class="stat-pill stat-assists">Assistencias: <strong>${row.assists}</strong></span>
+                <span class="stat-pill stat-goals">&#9917; Gols: <strong>${row.goals}</strong></span>
               </div>
             </div>
           </article>
@@ -53,16 +50,16 @@ async function loadBoard() {
 
     if (!filteredRows.length) {
       rankingList.innerHTML = '<p>Nenhum atleta para o filtro atual.</p>';
-      setStatus('Ainda nao ha dados de garcons.');
+      setStatus('Ainda nao ha dados de goleadores.');
       return;
     }
 
-    setStatus('Lista de garcons atualizada.');
+    setStatus('Lista de goleadores atualizada.');
   } catch (error) {
     setStatus(error.message, true);
   }
 }
 
-onlyWithAssists.addEventListener('change', loadBoard);
+onlyWithGoals.addEventListener('change', loadBoard);
 
 loadBoard();

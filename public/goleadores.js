@@ -28,8 +28,6 @@ async function loadBoard() {
     rankingList.innerHTML = filteredRows
       .map((row, index) => {
         const currentPosition = index + 1;
-        const isTie =
-          index > 0 && Number(row.goals || 0) === Number(filteredRows[index - 1].goals || 0);
 
         let medalClass = '';
         if (currentPosition === 1) medalClass = 'row-gold';
@@ -42,7 +40,6 @@ async function loadBoard() {
               <span class="rank-pos">${currentPosition}</span>
               <div class="rank-name-meta">
                 <h3>${row.name}</h3>
-                ${isTie ? '<span class="tie-badge">EMPATE</span>' : ''}
                 <span class="stat-pill stat-goals">&#9917; Gols: <strong>${row.goals}</strong></span>
               </div>
             </div>

@@ -10,7 +10,7 @@ function setStatus(message, isError = false) {
 
 async function loadRanking() {
   try {
-    const response = await fetch('/api/ranking?group=dia2');
+    const response = await fetch('/api/ranking?group=domingo');
     const data = await response.json();
 
     if (!response.ok) {
@@ -35,10 +35,7 @@ function renderRanking() {
   const term = (rankingSearchInput.value || '').trim().toLowerCase();
   const rankedRows = rankingCache.map((row, index) => ({
     ...row,
-    position: index + 1,
-    isTie: index > 0
-      && Number(row.goals || 0) === Number(rankingCache[index - 1].goals || 0)
-      && Number(row.assists || 0) === Number(rankingCache[index - 1].assists || 0)
+    position: index + 1
   }));
 
   const rows = !term
@@ -68,7 +65,6 @@ function renderRanking() {
             <span class="rank-pos">${current}</span>
             <div class="rank-name-meta">
               <h3>${row.name}</h3>
-              ${row.isTie ? '<span class="tie-badge">EMPATE</span>' : ''}
             </div>
           </div>
           <div class="rank-metrics">

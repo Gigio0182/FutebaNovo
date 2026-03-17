@@ -4,7 +4,7 @@ module.exports = async (req, res) => {
 	res.end(
 		JSON.stringify({
 			ok: true,
-			message: 'Use /api/login, /api/athletes e /api/ranking. Voce pode separar dados por grupo com ?group=dia2.'
+			message: 'Use /api/login, /api/athletes e /api/ranking. Voce pode separar dados por grupo com ?group=domingo.'
 		})
 	);
 };

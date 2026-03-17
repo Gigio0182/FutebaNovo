@@ -1,7 +1,7 @@
 const loginForm = document.getElementById('login-form');
 const statusEl = document.getElementById('status');
 const passwordInput = document.getElementById('admin-password');
-const TOKEN_KEY = 'app_futeba_dia2_token';
+const TOKEN_KEY = 'app_futeba_domingo_token';
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -10,7 +10,7 @@ function setStatus(message, isError = false) {
 
 async function hasSession() {
   try {
-    const response = await fetch('/api/athletes?group=dia2', { method: 'GET' });
+    const response = await fetch('/api/athletes?group=domingo', { method: 'GET' });
     return response.ok;
   } catch (error) {
     return false;
@@ -19,7 +19,7 @@ async function hasSession() {
 
 hasSession().then((ok) => {
   if (ok) {
-    window.location.href = '/dia2/athletes';
+    window.location.href = '/domingo/athletes';
   }
 });
 
@@ -43,7 +43,7 @@ loginForm.addEventListener('submit', async (event) => {
     }
 
     setStatus('Login realizado. Redirecionando...');
-    window.location.href = '/dia2/athletes';
+    window.location.href = '/domingo/athletes';
   } catch (error) {
     setStatus(error.message, true);
   }

@@ -1,26 +1,26 @@
 const CACHE_NAME = 'app-futeba-v3';
 const ASSETS = [
   '/',
-  '/dia2',
+  '/domingo',
   '/athletes',
-  '/dia2/athletes',
+  '/domingo/athletes',
   '/ranking',
-  '/dia2/ranking',
+  '/domingo/ranking',
   '/goleadores',
-  '/dia2/goleadores',
+  '/domingo/goleadores',
   '/garcons',
-  '/dia2/garcons',
+  '/domingo/garcons',
   '/style.css',
   '/login.js',
-  '/login-dia2.js',
+  '/login-domingo.js',
   '/athletes.js',
-  '/athletes-dia2.js',
+  '/athletes-domingo.js',
   '/ranking.js',
-  '/ranking-dia2.js',
+  '/ranking-domingo.js',
   '/goleadores.js',
-  '/goleadores-dia2.js',
+  '/goleadores-domingo.js',
   '/garcons.js',
-  '/garcons-dia2.js',
+  '/garcons-domingo.js',
   '/pwa.js',
   '/manifest.webmanifest',
   '/icon.svg'
@@ -73,7 +73,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
-    const fallbackPath = url.pathname.startsWith('/dia2') ? '/dia2' : '/';
+    const fallbackPath = url.pathname.startsWith('/domingo') ? '/domingo' : '/';
     event.respondWith(networkFirst(request, fallbackPath));
     return;
   }
