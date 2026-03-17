@@ -5,6 +5,10 @@
       "dest": "/public/index.html"
     },
     {
+      "src": "^/athletes$",
+      "dest": "/public/athletes.html"
+    },
+    {
       "src": "^/ranking$",
       "dest": "/public/ranking.html"
     },

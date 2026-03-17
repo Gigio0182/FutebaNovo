@@ -3,91 +3,30 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>App Futeba | Registro</title>
+		<title>App Futeba | Login</title>
 		<link rel="stylesheet" href="/public/style.css" />
 	</head>
 	<body>
-		<main class="container">
+		<main class="container narrow">
 			<header class="hero">
-				<h1>Registro Semanal de Futeba</h1>
-				<p>Cadastre atletas, jogos e eventos (gols/assistencias).</p>
-				<a class="btn secondary" href="/ranking">Ver Ranking</a>
-				<form id="login-form" class="login-row">
-					<input id="admin-password" type="password" placeholder="Senha de admin" required />
-					<button class="btn" type="submit">Entrar</button>
-					<button id="logout-btn" class="btn secondary" type="button">Sair</button>
-					<span id="auth-indicator" class="auth-indicator"></span>
-				</form>
+				<h1>App Futeba</h1>
+				<p>Entre para acessar o cadastro de atletas.</p>
 			</header>
 
 			<section class="card">
-				<h2>Novo Atleta</h2>
-				<form id="athlete-form" class="grid-form">
+				<h2>Login</h2>
+				<form id="login-form" class="grid-form">
 					<label>
-						Nome
-						<input id="athlete-name" required maxlength="60" />
+						Senha
+						<input id="admin-password" type="password" placeholder="Sua senha" required />
 					</label>
-					<button class="btn" type="submit">Salvar atleta</button>
+					<button class="btn" type="submit">Entrar</button>
 				</form>
+				<p id="status" class="status" aria-live="polite"></p>
+				<a class="btn secondary" href="/ranking">Ver ranking publico</a>
 			</section>
-
-			<section class="card">
-				<h2>Novo Jogo</h2>
-				<form id="match-form" class="grid-form">
-					<label>
-						Data
-						<input id="match-date" type="date" required />
-					</label>
-					<label>
-						Adversario
-						<input id="match-opponent" placeholder="Ex.: Time Azul" maxlength="80" />
-					</label>
-					<label>
-						Observacoes
-						<input id="match-notes" placeholder="Ex.: Jogo valendo trofeu" maxlength="120" />
-					</label>
-					<fieldset>
-						<legend>Participantes</legend>
-						<div id="participants-list" class="checkbox-list"></div>
-					</fieldset>
-					<button class="btn" type="submit">Salvar jogo</button>
-				</form>
-			</section>
-
-			<section class="card">
-				<h2>Registrar Evento</h2>
-				<form id="event-form" class="grid-form">
-					<label>
-						Jogo
-						<select id="event-match" required></select>
-					</label>
-					<label>
-						Atleta
-						<select id="event-athlete" required></select>
-					</label>
-					<label>
-						Tipo
-						<select id="event-type" required>
-							<option value="goal">Gol</option>
-							<option value="assist">Assistencia</option>
-						</select>
-					</label>
-					<label>
-						Minuto
-						<input id="event-minute" type="number" min="0" max="200" value="0" />
-					</label>
-					<button class="btn" type="submit">Salvar evento</button>
-				</form>
-			</section>
-
-			<section class="card">
-				<h2>Ultimos Jogos</h2>
-				<ul id="matches-view" class="list"></ul>
-			</section>
-
-			<p id="status" class="status" aria-live="polite"></p>
 		</main>
 
-		<script src="/public/main.js"></script>
+		<script src="/public/login.js"></script>
 	</body>
 </html>

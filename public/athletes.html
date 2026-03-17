@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>App Futeba | Cadastro de Atletas</title>
+    <link rel="stylesheet" href="/public/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>Cadastro de Atletas</h1>
+        <p>Cadastre atletas e incremente gols, assistencias e jogos.</p>
+        <div class="hero-actions">
+          <a class="btn secondary" href="/ranking">Ver Ranking</a>
+          <button id="logout-btn" class="btn" type="button">Sair</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Novo atleta</h2>
+        <form id="athlete-form" class="grid-form">
+          <label>
+            Nome do atleta
+            <input id="athlete-name" required maxlength="60" />
+          </label>
+          <button class="btn" type="submit">Cadastrar</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Atletas cadastrados</h2>
+        <table class="ranking-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Gols</th>
+              <th>Assistencias</th>
+              <th>Jogos</th>
+            </tr>
+          </thead>
+          <tbody id="athletes-body"></tbody>
+        </table>
+      </section>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script src="/public/athletes.js"></script>
+  </body>
+</html>

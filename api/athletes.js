@@ -7,14 +7,14 @@ module.exports = async (req, res) => {
     return;
   }
 
-  if (!requireAuth(req, res)) {
-    return;
-  }
-
   try {
     const db = getDb();
 
     if (req.method === 'GET') {
+      if (!requireAuth(req, res)) {
+        return;
+      }
+
       const snapshot = await db
         .collection('athletes')
         .orderBy('name', 'asc')
@@ -30,6 +30,10 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
+      if (!requireAuth(req, res)) {
+        return;
+      }
+
       const body = await parseBody(req);
       const name = (body.name || '').trim();
 
@@ -40,15 +44,64 @@ module.exports = async (req, res) => {
 
       const created = await db.collection('athletes').add({
         name,
+        goals: 0,
+        assists: 0,
+        games: 0,
         createdAt: new Date().toISOString()
       });
 
       sendJson(res, 201, {
         athlete: {
           id: created.id,
-          name
+          name,
+          goals: 0,
+          assists: 0,
+          games: 0
         }
       });
+      return;
+    }
+
+    if (req.method === 'PUT') {
+      if (!requireAuth(req, res)) {
+        return;
+      }
+
+      const body = await parseBody(req);
+      const id = (body.id || '').trim();
+      const field = (body.field || '').trim();
+
+      if (!id) {
+        sendJson(res, 400, { error: 'ID do atleta e obrigatorio.' });
+        return;
+      }
+
+      const allowed = new Set(['goals', 'assists', 'games']);
+      if (!allowed.has(field)) {
+        sendJson(res, 400, { error: 'Campo invalido para incremento.' });
+        return;
+      }
+
+      const docRef = db.collection('athletes').doc(id);
+      const currentSnap = await docRef.get();
+
+      if (!currentSnap.exists) {
+        sendJson(res, 404, { error: 'Atleta nao encontrado.' });
+        return;
+      }
+
+      const current = currentSnap.data();
+      const nextValue = Number(current[field] || 0) + 1;
+
+      await docRef.set(
+        {
+          [field]: nextValue,
+          updatedAt: new Date().toISOString()
+        },
+        { merge: true }
+      );
+
+      sendJson(res, 200, { ok: true, field, value: nextValue });
       return;
     }
 
