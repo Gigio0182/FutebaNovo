@@ -77,11 +77,11 @@ function renderRanking() {
             <h3>${row.name}</h3>
           </div>
           <div class="rank-metrics">
-            <span class="stat-pill">Jogos: <strong>${row.games}</strong></span>
-            <span class="stat-pill">Gols: <strong>${row.goals}</strong></span>
-            <span class="stat-pill">Assistencias: <strong>${row.assists}</strong></span>
-            <span class="stat-pill">MVP: <strong>${row.mvp || 0}</strong></span>
-            <span class="stat-pill">Pior em campo: <strong>${row.worst || 0}</strong></span>
+            <span class="stat-pill stat-games">Jogos: <strong>${row.games}</strong></span>
+            <span class="stat-pill stat-goals">Gols: <strong>${row.goals}</strong></span>
+            <span class="stat-pill stat-assists">Assistencias: <strong>${row.assists}</strong></span>
+            <span class="stat-pill stat-mvp">MVP: <strong>${row.mvp || 0}</strong></span>
+            <span class="stat-pill stat-worst">Pior em campo: <strong>${row.worst || 0}</strong></span>
           </div>
         </article>
       `;

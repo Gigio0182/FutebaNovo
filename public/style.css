@@ -395,6 +395,26 @@ button {
   font-size: 0.9rem;
 }
 
+.stat-games {
+  background: #e8f1f0;
+}
+
+.stat-goals {
+  background: #fff4cc;
+}
+
+.stat-assists {
+  background: #dff3ff;
+}
+
+.stat-mvp {
+  background: #eadbff;
+}
+
+.stat-worst {
+  background: #ffe4e4;
+}
+
 @media (max-width: 680px) {
   .hero,
   .card {
