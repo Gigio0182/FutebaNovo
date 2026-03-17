@@ -5,11 +5,11 @@
       "dest": "/public/index.html"
     },
     {
-      "src": "^/athletes$",
+      "src": "^/athletes/?$",
       "dest": "/public/athletes.html"
     },
     {
-      "src": "^/ranking$",
+      "src": "^/ranking/?$",
       "dest": "/public/ranking.html"
     },
     {
