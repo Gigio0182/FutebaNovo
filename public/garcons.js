@@ -1,5 +1,6 @@
 const body = document.getElementById('ranking-body');
 const statusEl = document.getElementById('status');
+const onlyWithAssists = document.getElementById('only-with-assists');
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -20,10 +21,14 @@ async function loadBoard() {
       return a.name.localeCompare(b.name, 'pt-BR');
     });
 
+    const filteredRows = onlyWithAssists.checked
+      ? rows.filter((row) => Number(row.assists || 0) > 0)
+      : rows;
+
     let lastAssists = null;
     let currentPosition = 0;
 
-    body.innerHTML = rows
+    body.innerHTML = filteredRows
       .map((row, index) => {
         if (row.assists !== lastAssists) {
           currentPosition = index + 1;
@@ -45,7 +50,7 @@ async function loadBoard() {
       })
       .join('');
 
-    if (!rows.length) {
+    if (!filteredRows.length) {
       setStatus('Ainda nao ha dados de garcons.');
       return;
     }
@@ -55,5 +60,7 @@ async function loadBoard() {
     setStatus(error.message, true);
   }
 }
+
+onlyWithAssists.addEventListener('change', loadBoard);
 
 loadBoard();

@@ -68,6 +68,19 @@ body {
   flex-wrap: wrap;
 }
 
+.filter-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+  font-weight: 700;
+}
+
+.filter-row input {
+  width: auto;
+  margin: 0;
+}
+
 .card {
   background: var(--card);
   border-radius: 1rem;
@@ -184,6 +197,41 @@ button {
   gap: 0.4rem;
 }
 
+.athletes-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.athlete-item {
+  border: 1px solid #dce7e4;
+  border-radius: 0.85rem;
+  padding: 0.8rem;
+  background: #fff;
+}
+
+.athlete-item h3 {
+  margin: 0 0 0.7rem;
+}
+
+.metrics-grid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.metric-card {
+  border: 1px solid #e6edeb;
+  border-radius: 0.7rem;
+  padding: 0.6rem;
+  background: #fcfffd;
+}
+
+.metric-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
 .metric-value {
   font-weight: 700;
 }
@@ -191,6 +239,28 @@ button {
 .metric-actions {
   display: inline-flex;
   gap: 0.3rem;
+}
+
+.metric-btn {
+  width: auto;
+  min-width: 44px;
+  padding: 0.48rem 0.65rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #115e59;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.metric-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.metric-btn-minus {
+  background: #7f1d1d;
 }
 
 .row-gold {
@@ -223,5 +293,10 @@ button {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
+  }
+
+  .metric-btn {
+    min-width: 48px;
+    padding: 0.56rem 0.75rem;
   }
 }

@@ -1,6 +1,6 @@
 const athleteForm = document.getElementById('athlete-form');
 const athleteNameInput = document.getElementById('athlete-name');
-const athletesBody = document.getElementById('athletes-body');
+const athletesList = document.getElementById('athletes-list');
 const statusEl = document.getElementById('status');
 const logoutBtn = document.getElementById('logout-btn');
 const TOKEN_KEY = 'app_futeba_token';
@@ -43,36 +43,41 @@ async function request(url, options = {}) {
 
 function renderAthletes(athletes) {
   if (!athletes.length) {
-    athletesBody.innerHTML = '<tr><td colspan="6">Nenhum atleta cadastrado.</td></tr>';
+    athletesList.innerHTML = '<p>Nenhum atleta cadastrado.</p>';
     return;
   }
 
-  const metricCell = (athlete, field) => {
+  const metricCard = (athlete, field, label) => {
     const value = Number(athlete[field] || 0);
     const minusDisabled = value <= 0 ? 'disabled' : '';
 
     return `
-      <div class="metric-cell">
-        <span class="metric-value">${value}</span>
-        <div class="metric-actions">
-          <button class="mini-btn mini-btn-minus" data-id="${athlete.id}" data-field="${field}" data-delta="-1" type="button" ${minusDisabled}>-1</button>
-          <button class="mini-btn" data-id="${athlete.id}" data-field="${field}" data-delta="1" type="button">+1</button>
+      <div class="metric-card">
+        <span class="metric-title">${label}</span>
+        <div class="metric-cell">
+          <span class="metric-value">${value}</span>
+          <div class="metric-actions">
+            <button class="metric-btn metric-btn-minus" data-id="${athlete.id}" data-field="${field}" data-delta="-1" type="button" ${minusDisabled}>-</button>
+            <button class="metric-btn" data-id="${athlete.id}" data-field="${field}" data-delta="1" type="button">+</button>
+          </div>
         </div>
       </div>
     `;
   };
 
-  athletesBody.innerHTML = athletes
+  athletesList.innerHTML = athletes
     .map(
       (athlete) => `
-      <tr>
-        <td>${athlete.name}</td>
-        <td>${metricCell(athlete, 'goals')}</td>
-        <td>${metricCell(athlete, 'assists')}</td>
-        <td>${metricCell(athlete, 'games')}</td>
-        <td>${metricCell(athlete, 'mvp')}</td>
-        <td>${metricCell(athlete, 'worst')}</td>
-      </tr>
+      <article class="athlete-item">
+        <h3>${athlete.name}</h3>
+        <div class="metrics-grid">
+          ${metricCard(athlete, 'goals', 'Gols')}
+          ${metricCard(athlete, 'assists', 'Assistencias')}
+          ${metricCard(athlete, 'games', 'Jogos')}
+          ${metricCard(athlete, 'mvp', 'MVP')}
+          ${metricCard(athlete, 'worst', 'Pior em campo')}
+        </div>
+      </article>
     `
     )
     .join('');
@@ -100,7 +105,7 @@ athleteForm.addEventListener('submit', async (event) => {
   }
 });
 
-athletesBody.addEventListener('click', async (event) => {
+athletesList.addEventListener('click', async (event) => {
   const button = event.target.closest('button[data-id][data-field]');
   if (!button) {
     return;

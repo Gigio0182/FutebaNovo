@@ -1,5 +1,6 @@
 const body = document.getElementById('ranking-body');
 const statusEl = document.getElementById('status');
+const onlyWithGoals = document.getElementById('only-with-goals');
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -20,10 +21,14 @@ async function loadBoard() {
       return a.name.localeCompare(b.name, 'pt-BR');
     });
 
+    const filteredRows = onlyWithGoals.checked
+      ? rows.filter((row) => Number(row.goals || 0) > 0)
+      : rows;
+
     let lastGoals = null;
     let currentPosition = 0;
 
-    body.innerHTML = rows
+    body.innerHTML = filteredRows
       .map((row, index) => {
         if (row.goals !== lastGoals) {
           currentPosition = index + 1;
@@ -45,7 +50,7 @@ async function loadBoard() {
       })
       .join('');
 
-    if (!rows.length) {
+    if (!filteredRows.length) {
       setStatus('Ainda nao ha dados de goleadores.');
       return;
     }
@@ -55,5 +60,7 @@ async function loadBoard() {
     setStatus(error.message, true);
   }
 }
+
+onlyWithGoals.addEventListener('change', loadBoard);
 
 loadBoard();
