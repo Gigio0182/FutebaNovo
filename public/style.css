@@ -367,6 +367,15 @@ button {
   margin: 0;
 }
 
+.rank-name-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
 .rank-pos {
   display: inline-flex;
   align-items: center;

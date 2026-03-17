@@ -44,10 +44,10 @@ async function loadBoard() {
           <article class="ranking-item ${medalClass}">
             <div class="rank-head">
               <span class="rank-pos">${currentPosition}</span>
-              <h3>${row.name}</h3>
-            </div>
-            <div class="rank-metrics">
-              <span class="stat-pill stat-assists">Assistencias: <strong>${row.assists}</strong></span>
+              <div class="rank-name-meta">
+                <h3>${row.name}</h3>
+                <span class="stat-pill stat-assists">&#127919; Assistencias: <strong>${row.assists}</strong></span>
+              </div>
             </div>
           </article>
         `;
