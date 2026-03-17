@@ -333,15 +333,33 @@ button {
 }
 
 .row-gold {
-  background: #fff7cf;
+  background: linear-gradient(180deg, #fff8d8 0%, #fff3bf 100%);
+  border: 2px solid #e6b800;
+  box-shadow: 0 8px 18px rgba(230, 184, 0, 0.22);
 }
 
 .row-silver {
-  background: #eef2f6;
+  background: linear-gradient(180deg, #f3f6f9 0%, #e8edf3 100%);
+  border: 2px solid #9aa7b6;
+  box-shadow: 0 8px 18px rgba(100, 116, 139, 0.2);
 }
 
 .row-bronze {
-  background: #f9e6d2;
+  background: linear-gradient(180deg, #fbeada 0%, #f4dcc3 100%);
+  border: 2px solid #b8773a;
+  box-shadow: 0 8px 18px rgba(184, 119, 58, 0.22);
+}
+
+.row-gold .rank-pos {
+  background: #d4a106;
+}
+
+.row-silver .rank-pos {
+  background: #64748b;
+}
+
+.row-bronze .rank-pos {
+  background: #9a5b1f;
 }
 
 .ranking-list {
