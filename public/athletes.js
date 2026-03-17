@@ -3,6 +3,7 @@ const athleteNameInput = document.getElementById('athlete-name');
 const athletesBody = document.getElementById('athletes-body');
 const statusEl = document.getElementById('status');
 const logoutBtn = document.getElementById('logout-btn');
+const TOKEN_KEY = 'app_futeba_token';
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -14,10 +15,13 @@ function redirectToLogin() {
 }
 
 async function request(url, options = {}) {
+  const token = localStorage.getItem(TOKEN_KEY) || '';
+
   const response = await fetch(url, {
     credentials: 'same-origin',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     },
     ...options
@@ -25,6 +29,7 @@ async function request(url, options = {}) {
 
   const data = await response.json();
   if (response.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
     redirectToLogin();
     throw new Error('Sessao expirada.');
   }
@@ -113,6 +118,7 @@ logoutBtn.addEventListener('click', async () => {
   try {
     await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
   } finally {
+    localStorage.removeItem(TOKEN_KEY);
     redirectToLogin();
   }
 });

@@ -1,6 +1,7 @@
 const loginForm = document.getElementById('login-form');
 const statusEl = document.getElementById('status');
 const passwordInput = document.getElementById('admin-password');
+const TOKEN_KEY = 'app_futeba_token';
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -18,7 +19,7 @@ async function hasSession() {
 
 hasSession().then((ok) => {
   if (ok) {
-    window.location.href = '/athletes';
+    window.location.href = '/public/athletes.html';
   }
 });
 
@@ -37,8 +38,12 @@ loginForm.addEventListener('submit', async (event) => {
       throw new Error(data.error || 'Falha no login.');
     }
 
+    if (data.token) {
+      localStorage.setItem(TOKEN_KEY, data.token);
+    }
+
     setStatus('Login realizado. Redirecionando...');
-    window.location.href = '/athletes';
+    window.location.href = '/public/athletes.html';
   } catch (error) {
     setStatus(error.message, true);
   }
