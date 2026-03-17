@@ -2,19 +2,15 @@
   "routes": [
     {
       "src": "^/$",
-      "dest": "/public/index.html"
+      "dest": "/index.html"
     },
     {
       "src": "^/athletes/?$",
-      "dest": "/public/athletes.html"
+      "dest": "/athletes.html"
     },
     {
       "src": "^/ranking/?$",
-      "dest": "/public/ranking.html"
-    },
-    {
-      "src": "^/public/(.*)$",
-      "dest": "/public/$1"
+      "dest": "/ranking.html"
     },
     {
       "src": "^/api/(.*)$",

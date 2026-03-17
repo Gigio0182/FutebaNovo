@@ -19,7 +19,7 @@ async function hasSession() {
 
 hasSession().then((ok) => {
   if (ok) {
-    window.location.href = '/public/athletes.html';
+    window.location.href = '/athletes';
   }
 });
 
@@ -43,7 +43,7 @@ loginForm.addEventListener('submit', async (event) => {
     }
 
     setStatus('Login realizado. Redirecionando...');
-    window.location.href = '/public/athletes.html';
+    window.location.href = '/athletes';
   } catch (error) {
     setStatus(error.message, true);
   }
