@@ -68,6 +68,16 @@ body {
   flex-wrap: wrap;
 }
 
+.sync-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #f6fffb;
+  font-weight: 700;
+}
+
 .filter-row {
   display: inline-flex;
   align-items: center;
@@ -218,6 +228,10 @@ button {
   border-radius: 0.85rem;
   padding: 0.8rem;
   background: #fff;
+}
+
+.athlete-item.pending {
+  border-style: dashed;
 }
 
 .athlete-item h3 {

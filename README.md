@@ -16,6 +16,8 @@ Aplicacao para registrar atletas e atualizar estatisticas (gols, assistencias, j
 - Ranking publico em `/ranking`.
 - Pagina de goleadores em `/goleadores`.
 - Pagina de garcons em `/garcons`.
+- Suporte PWA (instalavel no celular) com cache offline de telas.
+- Na tela de cadastro, alteracoes podem ser feitas offline e sincronizam automaticamente ao reconectar.
 
 ## Estrutura
 
@@ -29,6 +31,9 @@ Aplicacao para registrar atletas e atualizar estatisticas (gols, assistencias, j
 - `public/ranking.js`: renderizacao do ranking geral.
 - `public/goleadores.js`: renderizacao da lista de goleadores.
 - `public/garcons.js`: renderizacao da lista de garcons.
+- `public/manifest.webmanifest`: manifesto PWA.
+- `public/sw.js`: service worker para cache offline.
+- `public/pwa.js`: registro do service worker.
 - `api/athletes.js`: API de atletas.
 - `api/ranking.js`: API de ranking.
 - `api/_lib/firebase.js`: inicializacao do Firebase Admin.
