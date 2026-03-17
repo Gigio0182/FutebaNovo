@@ -33,9 +33,25 @@ async function loadRanking() {
 
 function renderRanking() {
   const term = (rankingSearchInput.value || '').trim().toLowerCase();
+  let lastKey = '';
+  let currentPosition = 0;
+
+  const rankedRows = rankingCache.map((row, index) => {
+    const key = `${row.goals}|${row.assists}|${row.games}|${row.mvp}|${row.worst}`;
+    if (key !== lastKey) {
+      currentPosition = index + 1;
+      lastKey = key;
+    }
+
+    return {
+      ...row,
+      position: currentPosition
+    };
+  });
+
   const rows = !term
-    ? rankingCache
-    : rankingCache.filter((row) =>
+    ? rankedRows
+    : rankedRows.filter((row) =>
         String(row.name || '').toLowerCase().includes(term)
       );
 
@@ -45,26 +61,19 @@ function renderRanking() {
     return;
   }
 
-  let lastKey = '';
-  let currentPosition = 0;
-
   rankingList.innerHTML = rows
-    .map((row, index) => {
-      const key = `${row.goals}|${row.assists}|${row.games}|${row.mvp}|${row.worst}`;
-      if (key !== lastKey) {
-        currentPosition = index + 1;
-        lastKey = key;
-      }
+    .map((row) => {
+      const current = row.position;
 
       let medalClass = '';
-      if (currentPosition === 1) medalClass = 'row-gold';
-      if (currentPosition === 2) medalClass = 'row-silver';
-      if (currentPosition === 3) medalClass = 'row-bronze';
+      if (current === 1) medalClass = 'row-gold';
+      if (current === 2) medalClass = 'row-silver';
+      if (current === 3) medalClass = 'row-bronze';
 
       return `
         <article class="ranking-item ${medalClass}">
           <div class="rank-head">
-            <span class="rank-pos">${currentPosition}</span>
+            <span class="rank-pos">${current}</span>
             <h3>${row.name}</h3>
           </div>
           <div class="rank-metrics">

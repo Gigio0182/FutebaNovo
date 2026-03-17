@@ -11,6 +11,13 @@ const CACHE_KEY = 'app_futeba_athletes_cache';
 let athletesCache = [];
 let syncInProgress = false;
 
+function escapeAttr(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle('error', isError);
@@ -260,8 +267,8 @@ function renderAthletes(athletes) {
       (athlete) => `
       <article class="athlete-item ${athlete.pending ? 'pending' : ''}">
         <div class="athlete-header-row">
-          <h3>${athlete.name}</h3>
-          <button class="name-edit-btn" type="button" data-action="edit-name" data-id="${athlete.id}" title="Editar nome">&#9998;</button>
+          <input class="name-edit-input" data-edit-name-for="${athlete.id}" value="${escapeAttr(athlete.name)}" />
+          <button class="name-edit-btn" type="button" data-action="save-name" data-id="${athlete.id}" title="Salvar nome">Salvar</button>
         </div>
         <div class="metrics-grid">
           ${metricCard(athlete, 'goals', 'Gols')}
@@ -336,7 +343,7 @@ athleteForm.addEventListener('submit', async (event) => {
 });
 
 athletesList.addEventListener('click', async (event) => {
-  const renameBtn = event.target.closest('button[data-action="edit-name"][data-id]');
+  const renameBtn = event.target.closest('button[data-action="save-name"][data-id]');
   if (renameBtn) {
     const athleteId = renameBtn.dataset.id;
     const athlete = athletesCache.find((item) => item.id === athleteId);
@@ -344,12 +351,9 @@ athletesList.addEventListener('click', async (event) => {
       return;
     }
 
-    const proposed = window.prompt('Novo nome do atleta:', athlete.name || '');
-    if (proposed === null) {
-      return;
-    }
+    const input = athletesList.querySelector(`input[data-edit-name-for="${athleteId}"]`);
+    const nextName = (input ? input.value : '').trim();
 
-    const nextName = proposed.trim();
     if (!nextName) {
       setStatus('Nome do atleta e obrigatorio.', true);
       return;

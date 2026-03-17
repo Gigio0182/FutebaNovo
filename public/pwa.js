@@ -1,3 +1,5 @@
+const APP_VERSION = 'v2026.03.17-4';
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
@@ -9,3 +11,10 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+window.addEventListener('DOMContentLoaded', () => {
+  const badge = document.createElement('div');
+  badge.className = 'version-badge';
+  badge.textContent = APP_VERSION;
+  document.body.appendChild(badge);
+});
