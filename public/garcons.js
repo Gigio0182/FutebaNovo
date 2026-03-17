@@ -46,7 +46,7 @@ async function loadBoard() {
               <span class="rank-pos">${currentPosition}</span>
               <div class="rank-name-meta">
                 <h3>${row.name}</h3>
-                <span class="stat-pill stat-assists">&#127919; Assistencias: <strong>${row.assists}</strong></span>
+                <span class="stat-pill stat-assists">Assistencias: <strong>${row.assists}</strong></span>
               </div>
             </div>
           </article>
