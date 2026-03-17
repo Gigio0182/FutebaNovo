@@ -4,7 +4,7 @@ module.exports = async (req, res) => {
 	res.end(
 		JSON.stringify({
 			ok: true,
-			message: 'Use /api/athletes, /api/matches, /api/events e /api/ranking.'
+			message: 'Use /api/login, /api/athletes e /api/ranking.'
 		})
 	);
 };
