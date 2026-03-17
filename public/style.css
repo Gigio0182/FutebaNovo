@@ -49,6 +49,15 @@ body {
   margin-top: 0;
 }
 
+.auth-indicator {
+  font-weight: 700;
+  align-self: center;
+}
+
+.hidden {
+  display: none;
+}
+
 .card {
   background: var(--card);
   border-radius: 1rem;

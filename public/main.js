@@ -15,6 +15,9 @@ const matchesView = document.getElementById('matches-view');
 const statusEl = document.getElementById('status');
 const loginForm = document.getElementById('login-form');
 const logoutBtn = document.getElementById('logout-btn');
+const passwordInput = document.getElementById('admin-password');
+const loginBtn = loginForm.querySelector('button[type="submit"]');
+const authIndicator = document.getElementById('auth-indicator');
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
@@ -26,6 +29,14 @@ function saveToken(token) {
 
 function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+}
+
+function updateAuthUi() {
+  const loggedIn = Boolean(getToken());
+  passwordInput.classList.toggle('hidden', loggedIn);
+  loginBtn.classList.toggle('hidden', loggedIn);
+  logoutBtn.classList.toggle('hidden', !loggedIn);
+  authIndicator.textContent = loggedIn ? 'Logado' : 'Nao logado';
 }
 
 function setStatus(message, isError = false) {
@@ -130,6 +141,7 @@ async function loginWithPassword(password) {
   }
 
   saveToken(data.token);
+  updateAuthUi();
 }
 
 athleteForm.addEventListener('submit', async (event) => {
@@ -201,11 +213,12 @@ loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   try {
-    const password = document.getElementById('admin-password').value;
+    const password = passwordInput.value;
     await loginWithPassword(password);
-    document.getElementById('admin-password').value = '';
+    passwordInput.value = '';
     await loadInitialData();
     setStatus('Login realizado.');
+    window.location.href = '/ranking';
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -213,8 +226,15 @@ loginForm.addEventListener('submit', async (event) => {
 
 logoutBtn.addEventListener('click', () => {
   clearToken();
+  updateAuthUi();
+  matchesView.innerHTML = '';
+  participantsList.innerHTML = '';
+  eventMatch.innerHTML = '';
+  eventAthlete.innerHTML = '';
   setStatus('Sessao encerrada.');
 });
+
+updateAuthUi();
 
 if (getToken()) {
   loadInitialData().catch((error) => setStatus(error.message, true));

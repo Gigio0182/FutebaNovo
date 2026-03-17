@@ -3,6 +3,9 @@ const statusEl = document.getElementById('status');
 const loginForm = document.getElementById('login-form');
 const logoutBtn = document.getElementById('logout-btn');
 const TOKEN_KEY = 'app_futeba_token';
+const passwordInput = document.getElementById('admin-password');
+const loginBtn = loginForm.querySelector('button[type="submit"]');
+const authIndicator = document.getElementById('auth-indicator');
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
@@ -14,6 +17,14 @@ function saveToken(token) {
 
 function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+}
+
+function updateAuthUi() {
+  const loggedIn = Boolean(getToken());
+  passwordInput.classList.toggle('hidden', loggedIn);
+  loginBtn.classList.toggle('hidden', loggedIn);
+  logoutBtn.classList.toggle('hidden', !loggedIn);
+  authIndicator.textContent = loggedIn ? 'Logado' : 'Nao logado';
 }
 
 function setStatus(message, isError = false) {
@@ -72,14 +83,15 @@ async function loginWithPassword(password) {
   }
 
   saveToken(data.token);
+  updateAuthUi();
 }
 
 loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   try {
-    const password = document.getElementById('admin-password').value;
+    const password = passwordInput.value;
     await loginWithPassword(password);
-    document.getElementById('admin-password').value = '';
+    passwordInput.value = '';
     await loadRanking();
     setStatus('Login realizado.');
   } catch (error) {
@@ -89,9 +101,12 @@ loginForm.addEventListener('submit', async (event) => {
 
 logoutBtn.addEventListener('click', () => {
   clearToken();
+  updateAuthUi();
   body.innerHTML = '';
   setStatus('Sessao encerrada.');
 });
+
+updateAuthUi();
 
 if (getToken()) {
   loadRanking();
