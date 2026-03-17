@@ -1,0 +1,16 @@
+{
+  "name": "meu-app-futebol",
+  "version": "1.0.0",
+  "description": "Registro semanal de futebol com ranking",
+  "main": "api/athletes.js",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "firebase-admin": "^13.7.0"
+  }
+}
