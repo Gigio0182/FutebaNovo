@@ -1,4 +1,4 @@
-const body = document.getElementById('ranking-body');
+const rankingList = document.getElementById('ranking-list');
 const statusEl = document.getElementById('status');
 const onlyWithGoals = document.getElementById('only-with-goals');
 
@@ -28,7 +28,7 @@ async function loadBoard() {
     let lastGoals = null;
     let currentPosition = 0;
 
-    body.innerHTML = filteredRows
+    rankingList.innerHTML = filteredRows
       .map((row, index) => {
         if (row.goals !== lastGoals) {
           currentPosition = index + 1;
@@ -41,16 +41,21 @@ async function loadBoard() {
         if (currentPosition === 3) medalClass = 'row-bronze';
 
         return `
-          <tr class="${medalClass}">
-            <td>${currentPosition}</td>
-            <td>${row.name}</td>
-            <td>${row.goals}</td>
-          </tr>
+          <article class="ranking-item ${medalClass}">
+            <div class="rank-head">
+              <span class="rank-pos">${currentPosition}</span>
+              <h3>${row.name}</h3>
+            </div>
+            <div class="rank-metrics">
+              <span class="stat-pill stat-goals">Gols: <strong>${row.goals}</strong></span>
+            </div>
+          </article>
         `;
       })
       .join('');
 
     if (!filteredRows.length) {
+      rankingList.innerHTML = '<p>Nenhum atleta para o filtro atual.</p>';
       setStatus('Ainda nao ha dados de goleadores.');
       return;
     }
