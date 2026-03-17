@@ -43,27 +43,35 @@ async function request(url, options = {}) {
 
 function renderAthletes(athletes) {
   if (!athletes.length) {
-    athletesBody.innerHTML = '<tr><td colspan="4">Nenhum atleta cadastrado.</td></tr>';
+    athletesBody.innerHTML = '<tr><td colspan="6">Nenhum atleta cadastrado.</td></tr>';
     return;
   }
+
+  const metricCell = (athlete, field) => {
+    const value = Number(athlete[field] || 0);
+    const minusDisabled = value <= 0 ? 'disabled' : '';
+
+    return `
+      <div class="metric-cell">
+        <span class="metric-value">${value}</span>
+        <div class="metric-actions">
+          <button class="mini-btn mini-btn-minus" data-id="${athlete.id}" data-field="${field}" data-delta="-1" type="button" ${minusDisabled}>-1</button>
+          <button class="mini-btn" data-id="${athlete.id}" data-field="${field}" data-delta="1" type="button">+1</button>
+        </div>
+      </div>
+    `;
+  };
 
   athletesBody.innerHTML = athletes
     .map(
       (athlete) => `
       <tr>
         <td>${athlete.name}</td>
-        <td>
-          ${Number(athlete.goals || 0)}
-          <button class="mini-btn" data-id="${athlete.id}" data-field="goals" type="button">+1</button>
-        </td>
-        <td>
-          ${Number(athlete.assists || 0)}
-          <button class="mini-btn" data-id="${athlete.id}" data-field="assists" type="button">+1</button>
-        </td>
-        <td>
-          ${Number(athlete.games || 0)}
-          <button class="mini-btn" data-id="${athlete.id}" data-field="games" type="button">+1</button>
-        </td>
+        <td>${metricCell(athlete, 'goals')}</td>
+        <td>${metricCell(athlete, 'assists')}</td>
+        <td>${metricCell(athlete, 'games')}</td>
+        <td>${metricCell(athlete, 'mvp')}</td>
+        <td>${metricCell(athlete, 'worst')}</td>
       </tr>
     `
     )
@@ -103,7 +111,8 @@ athletesBody.addEventListener('click', async (event) => {
       method: 'PUT',
       body: JSON.stringify({
         id: button.dataset.id,
-        field: button.dataset.field
+        field: button.dataset.field,
+        delta: Number(button.dataset.delta || 1)
       })
     });
 

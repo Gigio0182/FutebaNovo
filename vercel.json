@@ -13,6 +13,14 @@
       "dest": "/ranking.html"
     },
     {
+      "src": "^/goleadores/?$",
+      "dest": "/goleadores.html"
+    },
+    {
+      "src": "^/garcons/?$",
+      "dest": "/garcons.html"
+    },
+    {
       "src": "^/api/(.*)$",
       "dest": "/api/$1"
     }

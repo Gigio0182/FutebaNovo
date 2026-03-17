@@ -1,26 +1,34 @@
 # App Futeba
 
-Aplicacao para registrar atletas e atualizar estatisticas (gols, assistencias e jogos), com ranking consolidado.
+Aplicacao para registrar atletas e atualizar estatisticas (gols, assistencias, jogos, MVP e pior em campo), com rankings.
 
 ## Funcionalidades
 
 - Pagina de login em `/`.
 - Pagina autenticada de cadastro em `/athletes`.
 - Cadastro de atleta com nome.
-- Lista de atletas com botoes de incremento para:
+- Lista de atletas com botoes de incremento/decremento para:
   - `goals`
   - `assists`
   - `games`
-- Ranking publico em `/ranking`:
-  - `points = goals * 2 + assists`
+  - `mvp`
+  - `worst`
+- Ranking publico em `/ranking`.
+- Pagina de goleadores em `/goleadores`.
+- Pagina de garcons em `/garcons`.
 
 ## Estrutura
 
 - `public/index.html`: tela de login.
 - `public/athletes.html`: tela autenticada de cadastro/listagem de atletas.
 - `public/ranking.html`: tela de ranking.
+- `public/goleadores.html`: ranking de gols.
+- `public/garcons.html`: ranking de assistencias.
 - `public/login.js`: fluxo de login.
 - `public/athletes.js`: cadastro e incremento de estatisticas.
+- `public/ranking.js`: renderizacao do ranking geral.
+- `public/goleadores.js`: renderizacao da lista de goleadores.
+- `public/garcons.js`: renderizacao da lista de garcons.
 - `api/athletes.js`: API de atletas.
 - `api/ranking.js`: API de ranking.
 - `api/_lib/firebase.js`: inicializacao do Firebase Admin.
@@ -37,6 +45,8 @@ Acesse:
 - `http://localhost:3000/`
 - `http://localhost:3000/athletes`
 - `http://localhost:3000/ranking`
+- `http://localhost:3000/goleadores`
+- `http://localhost:3000/garcons`
 
 ## Configuracao Firebase
 
@@ -72,7 +82,7 @@ npx vercel
 - `POST /api/logout`
 - `GET /api/athletes`
 - `POST /api/athletes`
-- `PUT /api/athletes` (incrementa `goals`, `assists` ou `games`)
+- `PUT /api/athletes` (atualiza com `delta` em `goals`, `assists`, `games`, `mvp` ou `worst` sem permitir negativo)
 - `GET /api/ranking`
 
 ## Autenticacao Simples

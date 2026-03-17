@@ -6,25 +6,28 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle('error', isError);
 }
 
-async function loadRanking() {
+async function loadBoard() {
   try {
     const response = await fetch('/api/ranking');
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Erro ao carregar ranking.');
+      throw new Error(data.error || 'Erro ao carregar garcons.');
     }
 
-    const rows = data.ranking || [];
-    let lastKey = '';
+    const rows = (data.ranking || []).sort((a, b) => {
+      if (b.assists !== a.assists) return b.assists - a.assists;
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
+
+    let lastAssists = null;
     let currentPosition = 0;
 
     body.innerHTML = rows
       .map((row, index) => {
-        const key = `${row.goals}|${row.assists}|${row.games}|${row.mvp}|${row.worst}`;
-        if (key !== lastKey) {
+        if (row.assists !== lastAssists) {
           currentPosition = index + 1;
-          lastKey = key;
+          lastAssists = row.assists;
         }
 
         let medalClass = '';
@@ -36,25 +39,21 @@ async function loadRanking() {
           <tr class="${medalClass}">
             <td>${currentPosition}</td>
             <td>${row.name}</td>
-            <td>${row.games}</td>
-            <td>${row.goals}</td>
             <td>${row.assists}</td>
-            <td>${row.mvp || 0}</td>
-            <td>${row.worst || 0}</td>
           </tr>
         `;
       })
       .join('');
 
     if (!rows.length) {
-      setStatus('Ainda nao ha dados para ranking.');
+      setStatus('Ainda nao ha dados de garcons.');
       return;
     }
 
-    setStatus('Ranking atualizado.');
+    setStatus('Lista de garcons atualizada.');
   } catch (error) {
     setStatus(error.message, true);
   }
 }
 
-loadRanking();
+loadBoard();

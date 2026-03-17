@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>App Futeba | Ranking</title>
+    <title>App Futeba | Goleadores</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <main class="container">
       <header class="hero">
-        <h1>Ranking de Atletas</h1>
+        <h1>Goleadores</h1>
         <div class="hero-actions">
-          <a class="btn secondary" href="/">Ir para Login</a>
-          <a class="btn secondary" href="/goleadores">Goleadores</a>
+          <a class="btn secondary" href="/ranking">Ranking</a>
           <a class="btn secondary" href="/garcons">Garcons</a>
+          <a class="btn secondary" href="/">Login</a>
         </div>
       </header>
 
@@ -23,11 +23,7 @@
             <tr>
               <th>#</th>
               <th>Atleta</th>
-              <th>Jogos</th>
               <th>Gols</th>
-              <th>Assistencias</th>
-              <th>MVP</th>
-              <th>Pior em campo</th>
             </tr>
           </thead>
           <tbody id="ranking-body"></tbody>
@@ -37,6 +33,6 @@
       <p id="status" class="status" aria-live="polite"></p>
     </main>
 
-    <script src="/ranking.js"></script>
+    <script src="/goleadores.js"></script>
   </body>
 </html>

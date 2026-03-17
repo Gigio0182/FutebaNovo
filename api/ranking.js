@@ -22,20 +22,25 @@ module.exports = async (req, res) => {
         const goals = Number(data.goals || 0);
         const assists = Number(data.assists || 0);
         const games = Number(data.games || 0);
+        const mvp = Number(data.mvp || 0);
+        const worst = Number(data.worst || 0);
 
         return {
-        athleteId: doc.id,
+          athleteId: doc.id,
           name: data.name,
           games,
           goals,
           assists,
-          points: goals * 2 + assists
+          mvp,
+          worst
         };
       })
       .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
         if (b.goals !== a.goals) return b.goals - a.goals;
         if (b.assists !== a.assists) return b.assists - a.assists;
+        if (b.games !== a.games) return b.games - a.games;
+        if (b.mvp !== a.mvp) return b.mvp - a.mvp;
+        if (a.worst !== b.worst) return a.worst - b.worst;
         return a.name.localeCompare(b.name, 'pt-BR');
       });
 

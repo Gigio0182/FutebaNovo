@@ -47,6 +47,8 @@ module.exports = async (req, res) => {
         goals: 0,
         assists: 0,
         games: 0,
+        mvp: 0,
+        worst: 0,
         createdAt: new Date().toISOString()
       });
 
@@ -56,7 +58,9 @@ module.exports = async (req, res) => {
           name,
           goals: 0,
           assists: 0,
-          games: 0
+          games: 0,
+          mvp: 0,
+          worst: 0
         }
       });
       return;
@@ -70,13 +74,15 @@ module.exports = async (req, res) => {
       const body = await parseBody(req);
       const id = (body.id || '').trim();
       const field = (body.field || '').trim();
+      const deltaRaw = Number(body.delta);
+      const delta = Number.isFinite(deltaRaw) && deltaRaw !== 0 ? deltaRaw : 1;
 
       if (!id) {
         sendJson(res, 400, { error: 'ID do atleta e obrigatorio.' });
         return;
       }
 
-      const allowed = new Set(['goals', 'assists', 'games']);
+      const allowed = new Set(['goals', 'assists', 'games', 'mvp', 'worst']);
       if (!allowed.has(field)) {
         sendJson(res, 400, { error: 'Campo invalido para incremento.' });
         return;
@@ -91,7 +97,8 @@ module.exports = async (req, res) => {
       }
 
       const current = currentSnap.data();
-      const nextValue = Number(current[field] || 0) + 1;
+      const currentValue = Number(current[field] || 0);
+      const nextValue = Math.max(0, currentValue + delta);
 
       await docRef.set(
         {

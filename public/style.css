@@ -167,6 +167,44 @@ button {
   font-weight: 700;
 }
 
+.mini-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mini-btn-minus {
+  background: #7f1d1d;
+  margin-left: 0;
+}
+
+.metric-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.metric-value {
+  font-weight: 700;
+}
+
+.metric-actions {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+
+.row-gold {
+  background: #fff7cf;
+}
+
+.row-silver {
+  background: #eef2f6;
+}
+
+.row-bronze {
+  background: #f9e6d2;
+}
+
 @media (max-width: 680px) {
   .hero,
   .card {
@@ -179,5 +217,11 @@ button {
 
   .login-row {
     grid-template-columns: 1fr;
+  }
+
+  .ranking-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 }
