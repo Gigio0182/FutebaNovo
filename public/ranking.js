@@ -1,5 +1,7 @@
 const body = document.getElementById('ranking-body');
 const statusEl = document.getElementById('status');
+const rankingSearchInput = document.getElementById('ranking-search');
+let rankingCache = [];
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -15,7 +17,34 @@ async function loadRanking() {
       throw new Error(data.error || 'Erro ao carregar ranking.');
     }
 
-    const rows = data.ranking || [];
+    rankingCache = data.ranking || [];
+    renderRanking();
+
+    if (!rankingCache.length) {
+      setStatus('Ainda nao ha dados para ranking.');
+      return;
+    }
+
+    setStatus('Ranking atualizado.');
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+function renderRanking() {
+  const term = (rankingSearchInput.value || '').trim().toLowerCase();
+  const rows = !term
+    ? rankingCache
+    : rankingCache.filter((row) =>
+        String(row.name || '').toLowerCase().includes(term)
+      );
+
+  if (!rows.length) {
+    body.innerHTML = '';
+    setStatus('Nenhum atleta encontrado para a busca.');
+    return;
+  }
+
     let lastKey = '';
     let currentPosition = 0;
 
@@ -46,15 +75,9 @@ async function loadRanking() {
       })
       .join('');
 
-    if (!rows.length) {
-      setStatus('Ainda nao ha dados para ranking.');
-      return;
-    }
-
-    setStatus('Ranking atualizado.');
-  } catch (error) {
-    setStatus(error.message, true);
-  }
+  setStatus('Ranking atualizado.');
 }
+
+rankingSearchInput.addEventListener('input', renderRanking);
 
 loadRanking();

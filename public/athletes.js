@@ -1,9 +1,11 @@
 const athleteForm = document.getElementById('athlete-form');
 const athleteNameInput = document.getElementById('athlete-name');
+const athleteSearchInput = document.getElementById('athlete-search');
 const athletesList = document.getElementById('athletes-list');
 const statusEl = document.getElementById('status');
 const logoutBtn = document.getElementById('logout-btn');
 const TOKEN_KEY = 'app_futeba_token';
+let athletesCache = [];
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -83,9 +85,21 @@ function renderAthletes(athletes) {
     .join('');
 }
 
+function applySearchFilter() {
+  const term = (athleteSearchInput.value || '').trim().toLowerCase();
+  const filtered = !term
+    ? athletesCache
+    : athletesCache.filter((athlete) =>
+        String(athlete.name || '').toLowerCase().includes(term)
+      );
+
+  renderAthletes(filtered);
+}
+
 async function loadAthletes() {
   const data = await request('/api/athletes');
-  renderAthletes(data.athletes || []);
+  athletesCache = data.athletes || [];
+  applySearchFilter();
 }
 
 athleteForm.addEventListener('submit', async (event) => {
@@ -136,5 +150,7 @@ logoutBtn.addEventListener('click', async () => {
     redirectToLogin();
   }
 });
+
+athleteSearchInput.addEventListener('input', applySearchFilter);
 
 loadAthletes().catch((error) => setStatus(error.message, true));

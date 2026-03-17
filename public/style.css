@@ -81,6 +81,17 @@ body {
   margin: 0;
 }
 
+.search-row {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+}
+
+.search-row input {
+  margin-top: 0;
+}
+
 .card {
   background: var(--card);
   border-radius: 1rem;
