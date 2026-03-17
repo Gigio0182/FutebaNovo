@@ -1,4 +1,4 @@
-const body = document.getElementById('ranking-body');
+const rankingList = document.getElementById('ranking-list');
 const statusEl = document.getElementById('status');
 const rankingSearchInput = document.getElementById('ranking-search');
 let rankingCache = [];
@@ -40,40 +40,44 @@ function renderRanking() {
       );
 
   if (!rows.length) {
-    body.innerHTML = '';
+    rankingList.innerHTML = '<p>Nenhum atleta encontrado para a busca.</p>';
     setStatus('Nenhum atleta encontrado para a busca.');
     return;
   }
 
-    let lastKey = '';
-    let currentPosition = 0;
+  let lastKey = '';
+  let currentPosition = 0;
 
-    body.innerHTML = rows
-      .map((row, index) => {
-        const key = `${row.goals}|${row.assists}|${row.games}|${row.mvp}|${row.worst}`;
-        if (key !== lastKey) {
-          currentPosition = index + 1;
-          lastKey = key;
-        }
+  rankingList.innerHTML = rows
+    .map((row, index) => {
+      const key = `${row.goals}|${row.assists}|${row.games}|${row.mvp}|${row.worst}`;
+      if (key !== lastKey) {
+        currentPosition = index + 1;
+        lastKey = key;
+      }
 
-        let medalClass = '';
-        if (currentPosition === 1) medalClass = 'row-gold';
-        if (currentPosition === 2) medalClass = 'row-silver';
-        if (currentPosition === 3) medalClass = 'row-bronze';
+      let medalClass = '';
+      if (currentPosition === 1) medalClass = 'row-gold';
+      if (currentPosition === 2) medalClass = 'row-silver';
+      if (currentPosition === 3) medalClass = 'row-bronze';
 
-        return `
-          <tr class="${medalClass}">
-            <td>${currentPosition}</td>
-            <td>${row.name}</td>
-            <td>${row.games}</td>
-            <td>${row.goals}</td>
-            <td>${row.assists}</td>
-            <td>${row.mvp || 0}</td>
-            <td>${row.worst || 0}</td>
-          </tr>
-        `;
-      })
-      .join('');
+      return `
+        <article class="ranking-item ${medalClass}">
+          <div class="rank-head">
+            <span class="rank-pos">${currentPosition}</span>
+            <h3>${row.name}</h3>
+          </div>
+          <div class="rank-metrics">
+            <span class="stat-pill">Jogos: <strong>${row.games}</strong></span>
+            <span class="stat-pill">Gols: <strong>${row.goals}</strong></span>
+            <span class="stat-pill">Assistencias: <strong>${row.assists}</strong></span>
+            <span class="stat-pill">MVP: <strong>${row.mvp || 0}</strong></span>
+            <span class="stat-pill">Pior em campo: <strong>${row.worst || 0}</strong></span>
+          </div>
+        </article>
+      `;
+    })
+    .join('');
 
   setStatus('Ranking atualizado.');
 }

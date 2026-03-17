@@ -88,6 +88,21 @@ function adjustMetricLocal(athleteId, field, delta) {
   applySearchFilter();
 }
 
+function renameAthleteLocal(athleteId, name) {
+  athletesCache = athletesCache.map((athlete) =>
+    athlete.id === athleteId
+      ? {
+          ...athlete,
+          name
+        }
+      : athlete
+  );
+
+  athletesCache.sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt-BR'));
+  saveAthletesCache();
+  applySearchFilter();
+}
+
 function addLocalAthlete(name, localId) {
   athletesCache.push({
     id: localId,
@@ -165,6 +180,16 @@ async function flushQueue() {
         });
       }
 
+      if (action.type === 'rename-athlete') {
+        await request('/api/athletes', {
+          method: 'PUT',
+          body: JSON.stringify({
+            id: action.id,
+            name: action.name
+          })
+        });
+      }
+
       remaining.shift();
       saveQueue(remaining);
     }
@@ -234,7 +259,10 @@ function renderAthletes(athletes) {
     .map(
       (athlete) => `
       <article class="athlete-item ${athlete.pending ? 'pending' : ''}">
-        <h3>${athlete.name}</h3>
+        <div class="athlete-header-row">
+          <h3>${athlete.name}</h3>
+          <button class="name-edit-btn" type="button" data-action="edit-name" data-id="${athlete.id}" title="Editar nome">&#9998;</button>
+        </div>
         <div class="metrics-grid">
           ${metricCard(athlete, 'goals', 'Gols')}
           ${metricCard(athlete, 'assists', 'Assistencias')}
@@ -308,6 +336,46 @@ athleteForm.addEventListener('submit', async (event) => {
 });
 
 athletesList.addEventListener('click', async (event) => {
+  const renameBtn = event.target.closest('button[data-action="edit-name"][data-id]');
+  if (renameBtn) {
+    const athleteId = renameBtn.dataset.id;
+    const athlete = athletesCache.find((item) => item.id === athleteId);
+    if (!athlete) {
+      return;
+    }
+
+    const proposed = window.prompt('Novo nome do atleta:', athlete.name || '');
+    if (proposed === null) {
+      return;
+    }
+
+    const nextName = proposed.trim();
+    if (!nextName) {
+      setStatus('Nome do atleta e obrigatorio.', true);
+      return;
+    }
+
+    renameAthleteLocal(athleteId, nextName);
+
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'rename-athlete', id: athleteId, name: nextName });
+      setStatus('Nome alterado offline. Sera sincronizado automaticamente.');
+      return;
+    }
+
+    try {
+      await request('/api/athletes', {
+        method: 'PUT',
+        body: JSON.stringify({ id: athleteId, name: nextName })
+      });
+      await loadAthletes(true);
+      setStatus('Nome atualizado com sucesso.');
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    return;
+  }
+
   const button = event.target.closest('button[data-id][data-field]');
   if (!button) {
     return;

@@ -74,6 +74,7 @@ module.exports = async (req, res) => {
       const body = await parseBody(req);
       const id = (body.id || '').trim();
       const field = (body.field || '').trim();
+      const nextName = (body.name || '').trim();
       const deltaRaw = Number(body.delta);
       const delta = Number.isFinite(deltaRaw) && deltaRaw !== 0 ? deltaRaw : 1;
 
@@ -93,6 +94,19 @@ module.exports = async (req, res) => {
 
       if (!currentSnap.exists) {
         sendJson(res, 404, { error: 'Atleta nao encontrado.' });
+        return;
+      }
+
+      if (nextName && !field) {
+        await docRef.set(
+          {
+            name: nextName,
+            updatedAt: new Date().toISOString()
+          },
+          { merge: true }
+        );
+
+        sendJson(res, 200, { ok: true, name: nextName });
         return;
       }
 
