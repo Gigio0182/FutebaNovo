@@ -10,6 +10,7 @@ const QUEUE_KEY = 'app_futeba_domingo_offline_queue';
 const CACHE_KEY = 'app_futeba_domingo_athletes_cache';
 let athletesCache = [];
 let syncInProgress = false;
+let editingNameAthleteId = null;
 
 function escapeAttr(value) {
   return String(value)
@@ -263,12 +264,16 @@ function renderAthletes(athletes) {
   };
 
   athletesList.innerHTML = athletes
-    .map(
-      (athlete) => `
+    .map((athlete) => {
+      const editingName = editingNameAthleteId === athlete.id;
+      return `
       <article class="athlete-item ${athlete.pending ? 'pending' : ''}">
         <div class="athlete-header-row">
-          <input class="name-edit-input" data-edit-name-for="${athlete.id}" value="${escapeAttr(athlete.name)}" />
-          <button class="name-edit-btn" type="button" data-action="save-name" data-id="${athlete.id}" title="Salvar nome">Salvar</button>
+          <span class="athlete-summary-name" data-action="edit-name" data-id="${athlete.id}" style="flex:1;cursor:pointer;font-weight:700;${editingName ? 'display:none;' : ''}">${escapeAttr(athlete.name)}</span>
+          <form class="athlete-edit-name-form" data-id="${athlete.id}" style="display:${editingName ? 'flex' : 'none'};align-items:center;gap:0.3rem;flex:1;" onsubmit="return false;">
+            <input class="name-edit-input" data-edit-name-for="${athlete.id}" value="${escapeAttr(athlete.name)}" maxlength="60" style="width:140px;" />
+            <button class="name-edit-btn" type="submit" data-action="save-name" data-id="${athlete.id}" title="Salvar nome">Salvar</button>
+          </form>
         </div>
         <div class="metrics-grid">
           ${metricCard(athlete, 'goals', 'Gols')}
@@ -278,8 +283,8 @@ function renderAthletes(athletes) {
           ${metricCard(athlete, 'worst', 'Pior em campo')}
         </div>
       </article>
-    `
-    )
+    `;
+    })
     .join('');
 }
 
@@ -343,6 +348,19 @@ athleteForm.addEventListener('submit', async (event) => {
 });
 
 athletesList.addEventListener('click', async (event) => {
+  const nameSpan = event.target.closest('.athlete-summary-name[data-action="edit-name"][data-id]');
+  if (nameSpan) {
+    editingNameAthleteId = nameSpan.dataset.id;
+    applySearchFilter();
+    setTimeout(() => {
+      const input = athletesList.querySelector(`input[data-edit-name-for="${editingNameAthleteId}"]`);
+      if (input) {
+        input.focus();
+      }
+    }, 0);
+    return;
+  }
+
   const renameBtn = event.target.closest('button[data-action="save-name"][data-id]');
   if (renameBtn) {
     const athleteId = renameBtn.dataset.id;
@@ -360,6 +378,8 @@ athletesList.addEventListener('click', async (event) => {
     }
 
     renameAthleteLocal(athleteId, nextName);
+    editingNameAthleteId = null;
+    applySearchFilter();
 
     if (!navigator.onLine) {
       enqueueAction({ type: 'rename-athlete', id: athleteId, name: nextName });
@@ -377,6 +397,7 @@ athletesList.addEventListener('click', async (event) => {
     } catch (error) {
       setStatus(error.message, true);
     }
+    applySearchFilter();
     return;
   }
 
@@ -410,6 +431,47 @@ athletesList.addEventListener('click', async (event) => {
   } catch (error) {
     setStatus(error.message, true);
   }
+});
+
+athletesList.addEventListener('submit', async (event) => {
+  const form = event.target.closest('.athlete-edit-name-form[data-id]');
+  if (!form) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const submitButton = form.querySelector('button[data-action="save-name"][data-id]');
+  if (submitButton) {
+    submitButton.click();
+  }
+});
+
+document.addEventListener('click', (event) => {
+  if (!editingNameAthleteId) {
+    return;
+  }
+
+  const currentForm = athletesList.querySelector(
+    `.athlete-edit-name-form[data-id="${editingNameAthleteId}"]`
+  );
+  if (!currentForm) {
+    return;
+  }
+
+  const clickedNameTrigger = event.target.closest(
+    '.athlete-summary-name[data-action="edit-name"][data-id]'
+  );
+  if (clickedNameTrigger) {
+    return;
+  }
+
+  if (currentForm.contains(event.target)) {
+    return;
+  }
+
+  editingNameAthleteId = null;
+  applySearchFilter();
 });
 
 logoutBtn.addEventListener('click', async () => {

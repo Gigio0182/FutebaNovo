@@ -441,6 +441,33 @@ athletesList.addEventListener('submit', async (event) => {
   applySearchFilter();
 });
 
+document.addEventListener('click', (event) => {
+  if (!editingNameAthleteId) {
+    return;
+  }
+
+  const currentForm = athletesList.querySelector(
+    `.athlete-edit-name-form[data-id="${editingNameAthleteId}"]`
+  );
+  if (!currentForm) {
+    return;
+  }
+
+  const clickedNameTrigger = event.target.closest(
+    '.athlete-summary-name[data-action="edit-name"][data-id]'
+  );
+  if (clickedNameTrigger) {
+    return;
+  }
+
+  if (currentForm.contains(event.target)) {
+    return;
+  }
+
+  editingNameAthleteId = null;
+  applySearchFilter();
+});
+
 logoutBtn.addEventListener('click', async () => {
   try {
     await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
