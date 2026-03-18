@@ -10,20 +10,54 @@
   </head>
   <body>
     <main class="container">
-      <header class="hero">
+      <header class="hero ranking-hero">
         <h1>Ranking dos craques da Volvo</h1>
         <div class="hero-actions">
           <a class="btn secondary" href="/goleadores">Goleadores</a>
           <a class="btn secondary" href="/garcons">Garçons</a>
         </div>
+        <button id="help-btn" class="help-btn" type="button" title="Ajuda de Pontuação" aria-label="Ajuda de Pontuação">
+          <span aria-hidden="true">?</span>
+        </button>
       </header>
 
       <section class="card">
         <div class="search-row">
-          <input id="ranking-search" type="search" placeholder="Buscar atleta por nome" />
+          <input id="ranking-search" type="search" placeholder="Buscar atleta por nome" style="max-width:220px;" />
         </div>
         <div id="ranking-list" class="ranking-list"></div>
       </section>
+
+      <dialog id="help-dialog" class="help-dialog">
+        <div class="help-dialog-content">
+          <h2>Como calculamos a pontuação</h2>
+          <p class="help-dialog-subtitle">Cada métrica tem um peso diferente no ranking final.</p>
+
+          <ul class="help-score-list">
+            <li>
+              <span class="help-score-label">Assistência</span>
+              <span class="help-score-value positive">+1,00</span>
+            </li>
+            <li>
+              <span class="help-score-label">Gol</span>
+              <span class="help-score-value positive">+1,50</span>
+            </li>
+            <li>
+              <span class="help-score-label">Jogo</span>
+              <span class="help-score-value positive">+0,50</span>
+            </li>
+            <li>
+              <span class="help-score-label">MVP</span>
+              <span class="help-score-value positive">+0,50</span>
+            </li>
+            <li>
+              <span class="help-score-label">Pior em campo</span>
+              <span class="help-score-value negative">-0,50</span>
+            </li>
+          </ul>
+          <button id="close-help-btn" class="btn help-close-btn" type="button">Fechar</button>
+        </div>
+      </dialog>
 
       <p id="status" class="status" aria-live="polite"></p>
     </main>
