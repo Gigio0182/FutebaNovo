@@ -40,7 +40,7 @@ async function loadRanking() {
 
 
 function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0 }) {
-  const pontos = (Number(games) * 0.25) + (Number(goals) * 1.25) + (Number(assists) * 1) + (Number(mvp) * 0.25) - (Number(worst) * 0.25);
+  const pontos = (Number(games) * 0.5) + (Number(goals) * 1.5) + (Number(assists) * 1) + (Number(mvp) * 0.5) - (Number(worst) * 0.5);
   return Math.max(0, Math.round(pontos * 100) / 100);
 }
 
