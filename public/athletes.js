@@ -8,8 +8,11 @@ const syncStateEl = document.getElementById('sync-state');
 const TOKEN_KEY = 'app_futeba_token';
 const QUEUE_KEY = 'app_futeba_offline_queue';
 const CACHE_KEY = 'app_futeba_athletes_cache';
+
 let athletesCache = [];
 let syncInProgress = false;
+let expandedAthleteId = null;
+let editingNameAthleteId = null;
 
 function escapeAttr(value) {
   return String(value)
@@ -247,7 +250,6 @@ function renderAthletes(athletes) {
   const metricCard = (athlete, field, label) => {
     const value = Number(athlete[field] || 0);
     const minusDisabled = value <= 0 ? 'disabled' : '';
-
     return `
       <div class="metric-card">
         <span class="metric-title">${label}</span>
@@ -263,23 +265,31 @@ function renderAthletes(athletes) {
   };
 
   athletesList.innerHTML = athletes
-    .map(
-      (athlete) => `
-      <article class="athlete-item ${athlete.pending ? 'pending' : ''}">
-        <div class="athlete-header-row">
-          <input class="name-edit-input" data-edit-name-for="${athlete.id}" value="${escapeAttr(athlete.name)}" />
-          <button class="name-edit-btn" type="button" data-action="save-name" data-id="${athlete.id}" title="Salvar nome">Salvar</button>
-        </div>
-        <div class="metrics-grid">
-          ${metricCard(athlete, 'goals', 'Gols')}
-          ${metricCard(athlete, 'assists', 'Assistencias')}
-          ${metricCard(athlete, 'games', 'Jogos')}
-          ${metricCard(athlete, 'mvp', 'MVP')}
-          ${metricCard(athlete, 'worst', 'Pior em campo')}
-        </div>
-      </article>
-    `
-    )
+    .map((athlete) => {
+      const expanded = expandedAthleteId === athlete.id;
+      const editingName = editingNameAthleteId === athlete.id;
+      return `
+        <article class="athlete-item${athlete.pending ? ' pending' : ''}${expanded ? ' expanded' : ''}" data-athlete-id="${athlete.id}">
+          <div class="athlete-header-row athlete-summary-row" style="cursor:pointer;user-select:none;gap:0.7rem;" data-action="toggle-expand" data-id="${athlete.id}">
+            <span class="athlete-summary-name" data-action="edit-name" data-id="${athlete.id}" style="flex:1;cursor:pointer;font-weight:700;${editingName ? 'display:none;' : ''}">${escapeAttr(athlete.name)}</span>
+            <form class="athlete-edit-name-form" data-id="${athlete.id}" style="display:${editingName ? 'flex' : 'none'};align-items:center;gap:0.3rem;flex:1;">
+              <input class="name-edit-input" data-edit-name-for="${athlete.id}" value="${escapeAttr(athlete.name)}" maxlength="60" style="width:140px;" />
+              <button class="name-edit-btn" type="submit" data-action="save-name" data-id="${athlete.id}" title="Salvar nome">Salvar</button>
+            </form>
+            <span class="athlete-summary-arrow" style="font-size:1.2em;">${expanded ? '▲' : '▼'}</span>
+          </div>
+          <div class="athlete-details" style="display:${expanded ? 'block' : 'none'};margin-top:0.7rem;">
+            <div class="metrics-grid">
+              ${metricCard(athlete, 'goals', 'Gols')}
+              ${metricCard(athlete, 'assists', 'Assistencias')}
+              ${metricCard(athlete, 'games', 'Jogos')}
+              ${metricCard(athlete, 'mvp', 'MVP')}
+              ${metricCard(athlete, 'worst', 'Pior em campo')}
+            </div>
+          </div>
+        </article>
+      `;
+    })
     .join('');
 }
 
@@ -342,74 +352,93 @@ athleteForm.addEventListener('submit', async (event) => {
   }
 });
 
+
 athletesList.addEventListener('click', async (event) => {
-  const renameBtn = event.target.closest('button[data-action="save-name"][data-id]');
-  if (renameBtn) {
-    const athleteId = renameBtn.dataset.id;
-    const athlete = athletesCache.find((item) => item.id === athleteId);
-    if (!athlete) {
-      return;
-    }
+  // Iniciar edição do nome ao clicar no nome (não expande nem colapsa)
+  const nameSpan = event.target.closest('.athlete-summary-name[data-action="edit-name"][data-id]');
+  if (nameSpan) {
+    editingNameAthleteId = nameSpan.dataset.id;
+    applySearchFilter();
+    setTimeout(() => {
+      const input = athletesList.querySelector(`input[data-edit-name-for="${editingNameAthleteId}"]`);
+      if (input) input.focus();
+    }, 0);
+    return;
+  }
 
-    const input = athletesList.querySelector(`input[data-edit-name-for="${athleteId}"]`);
-    const nextName = (input ? input.value : '').trim();
+  // Expand/collapse athlete details (mas não se estiver editando o nome)
+  const summaryRow = event.target.closest('.athlete-summary-row[data-action="toggle-expand"][data-id]');
+  if (summaryRow) {
+    const athleteId = summaryRow.dataset.id;
+    if (editingNameAthleteId === athleteId) return;
+    expandedAthleteId = expandedAthleteId === athleteId ? null : athleteId;
+    applySearchFilter();
+    return;
+  }
 
-    if (!nextName) {
-      setStatus('Nome do atleta e obrigatorio.', true);
-      return;
-    }
-
-    renameAthleteLocal(athleteId, nextName);
-
-    if (!navigator.onLine) {
-      enqueueAction({ type: 'rename-athlete', id: athleteId, name: nextName });
-      setStatus('Nome alterado offline. Sera sincronizado automaticamente.');
-      return;
-    }
-
+  // Ajustar estatísticas
+  const button = event.target.closest('button[data-id][data-field]');
+  if (button) {
     try {
+      const payload = {
+        id: button.dataset.id,
+        field: button.dataset.field,
+        delta: Number(button.dataset.delta || 1)
+      };
+
+      adjustMetricLocal(payload.id, payload.field, payload.delta);
+
+      if (!navigator.onLine) {
+        enqueueAction({ type: 'adjust-metric', ...payload });
+        setStatus('Alteracao salva offline. Sera sincronizada automaticamente.');
+        return;
+      }
+
       await request('/api/athletes', {
         method: 'PUT',
-        body: JSON.stringify({ id: athleteId, name: nextName })
+        body: JSON.stringify(payload)
       });
+
       await loadAthletes(true);
-      setStatus('Nome atualizado com sucesso.');
+      setStatus('Estatistica atualizada.');
     } catch (error) {
       setStatus(error.message, true);
     }
     return;
   }
+});
 
-  const button = event.target.closest('button[data-id][data-field]');
-  if (!button) {
+// Salvar nome ao submeter o form
+athletesList.addEventListener('submit', async (event) => {
+  const form = event.target.closest('.athlete-edit-name-form[data-id]');
+  if (!form) return;
+  event.preventDefault();
+  const athleteId = form.dataset.id;
+  const input = form.querySelector('input[data-edit-name-for]');
+  const nextName = (input ? input.value : '').trim();
+  if (!nextName) {
+    setStatus('Nome do atleta e obrigatorio.', true);
     return;
   }
-
+  renameAthleteLocal(athleteId, nextName);
+  editingNameAthleteId = null;
+  if (!navigator.onLine) {
+    enqueueAction({ type: 'rename-athlete', id: athleteId, name: nextName });
+    setStatus('Nome alterado offline. Sera sincronizado automaticamente.');
+    applySearchFilter();
+    return;
+  }
   try {
-    const payload = {
-      id: button.dataset.id,
-      field: button.dataset.field,
-      delta: Number(button.dataset.delta || 1)
-    };
-
-    adjustMetricLocal(payload.id, payload.field, payload.delta);
-
-    if (!navigator.onLine) {
-      enqueueAction({ type: 'adjust-metric', ...payload });
-      setStatus('Alteracao salva offline. Sera sincronizada automaticamente.');
-      return;
-    }
-
     await request('/api/athletes', {
       method: 'PUT',
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ id: athleteId, name: nextName })
     });
-
     await loadAthletes(true);
-    setStatus('Estatistica atualizada.');
+    setStatus('Nome atualizado com sucesso.');
   } catch (error) {
     setStatus(error.message, true);
   }
+  applySearchFilter();
 });
 
 logoutBtn.addEventListener('click', async () => {

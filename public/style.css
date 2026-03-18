@@ -1,3 +1,23 @@
+.help-btn {
+  background: #0f766e;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  min-width: unset;
+  min-height: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px #05966922;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.help-btn:hover {
+  background: #059669;
+}
 :root {
   --bg: #f2efe7;
   --ink: #1f2a2c;
@@ -156,6 +176,7 @@ button {
   width: auto;
   background: linear-gradient(135deg, var(--accent-2) 0%, #9a5a0e 100%);
   padding: 0.56rem 0.9rem;
+  border-radius: 1.5rem;
 }
 
 .checkbox-list {

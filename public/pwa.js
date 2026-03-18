@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.0.0';
+const APP_VERSION = 'v1.0.1';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

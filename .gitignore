@@ -5,3 +5,5 @@ node_modules/
 firebase-service.json
 .vercel/
 npm-debug.log*
+.vercel
+.env*.local

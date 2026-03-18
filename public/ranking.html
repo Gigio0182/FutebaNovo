@@ -10,20 +10,38 @@
   </head>
   <body>
     <main class="container">
-      <header class="hero">
+      <header class="hero" style="position:relative;">
         <h1>Ranking dos craques da Volvo</h1>
         <div class="hero-actions">
           <a class="btn secondary" href="/goleadores">Goleadores</a>
           <a class="btn secondary" href="/garcons">Garçons</a>
+          <a class="btn secondary" href="/participacoes-gols.html" id="btn-participacoes-gols">Mais participações em gols</a>
         </div>
+        <button id="help-btn" class="help-btn" type="button" title="Ajuda de Pontuação" style="position:absolute;top:1.2rem;right:1.2rem;padding:0.4rem 0.7rem;min-width:unset;width:auto;height:auto;background:#0f766e;color:#fff;border-radius:50%;font-size:1.3rem;line-height:1;display:flex;align-items:center;justify-content:center;z-index:10;">
+          ?
+        </button>
       </header>
 
       <section class="card">
         <div class="search-row">
-          <input id="ranking-search" type="search" placeholder="Buscar atleta por nome" />
+          <input id="ranking-search" type="search" placeholder="Buscar atleta por nome" style="max-width:220px;" />
         </div>
         <div id="ranking-list" class="ranking-list"></div>
       </section>
+
+      <dialog id="help-dialog">
+        <div style="padding:1rem;max-width:340px">
+          <h2 style="margin-top:0;text-align:center;">Pontuação</h2>
+          <ul style="margin-bottom:1.2rem;">
+            <li><strong>Assistência</strong>: +1 ponto</li>
+            <li><strong>Gol</strong>: +1,25 pontos</li>
+            <li><strong>Jogo</strong>: +0,25 pontos</li>
+            <li><strong>MVP</strong>: +0,25 pontos</li>
+            <li><strong>Pior em campo</strong>: -0,25 pontos</li>
+          </ul>
+          <button id="close-help-btn" class="btn" type="button" style="width:100%;">Fechar</button>
+        </div>
+      </dialog>
 
       <p id="status" class="status" aria-live="polite"></p>
     </main>
