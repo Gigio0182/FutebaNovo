@@ -31,9 +31,20 @@ async function loadRanking() {
   }
 }
 
+
+function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0 }) {
+  const pontos = (Number(games) * 0.25) + (Number(goals) * 1.25) + (Number(assists) * 1) + (Number(mvp) * 0.25) - (Number(worst) * 0.25);
+  return Math.max(0, Math.round(pontos * 100) / 100);
+}
+
 function renderRanking() {
   const term = (rankingSearchInput.value || '').trim().toLowerCase();
-  const rankedRows = rankingCache.map((row, index) => ({
+  // Ordenar por pontos antes de atribuir posição
+  const sorted = [...rankingCache].map((row) => ({
+    ...row,
+    pontos: calcularPontos(row)
+  })).sort((a, b) => b.pontos - a.pontos || a.name.localeCompare(b.name, 'pt-BR'));
+  const rankedRows = sorted.map((row, index) => ({
     ...row,
     position: index + 1
   }));
@@ -63,8 +74,11 @@ function renderRanking() {
         <article class="ranking-item ${medalClass}">
           <div class="rank-head">
             <span class="rank-pos">${current}</span>
-            <div class="rank-name-meta">
+            <div class="rank-name-meta" style="display:flex;align-items:center;gap:0.7rem;justify-content:space-between;width:100%;">
               <h3>${row.name}</h3>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;min-width:70px;width:100px;">
+                <span class="stat-pill stat-pontos" style="background:#059669;color:#fff;font-size:1.1rem;font-weight:800;padding:0.38rem 1.1rem;box-shadow:0 2px 8px #05966922;letter-spacing:0.5px;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;">${row.pontos}</span>
+              </div>
             </div>
           </div>
           <div class="rank-metrics">
@@ -81,6 +95,17 @@ function renderRanking() {
 
   setStatus('Ranking atualizado.');
 }
+
+// Ajuda de pontuação
+document.addEventListener('DOMContentLoaded', () => {
+  const helpBtn = document.getElementById('help-btn');
+  const helpDialog = document.getElementById('help-dialog');
+  const closeHelpBtn = document.getElementById('close-help-btn');
+  if (helpBtn && helpDialog && closeHelpBtn) {
+    helpBtn.addEventListener('click', () => helpDialog.showModal());
+    closeHelpBtn.addEventListener('click', () => helpDialog.close());
+  }
+});
 
 rankingSearchInput.addEventListener('input', renderRanking);
 

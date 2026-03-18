@@ -4,7 +4,7 @@
   "description": "Registro semanal de futebol com ranking",
   "main": "api/athletes.js",
   "scripts": {
-    "dev": "vercel dev"
+    "dev": "node"
   },
   "keywords": [],
   "author": "",
