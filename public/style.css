@@ -284,6 +284,35 @@ button {
   margin: 0;
 }
 
+.expand-toggle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.28rem 0.58rem;
+  border-radius: 999px;
+  border: 1px solid #cddcd8;
+  background: #f2f8f6;
+  color: #1f4d49;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.expand-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.expand-toggle-label {
+  font-size: 0.8rem;
+}
+
 .name-edit-btn {
   width: auto;
   min-width: 60px;

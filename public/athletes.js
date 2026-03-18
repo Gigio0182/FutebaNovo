@@ -276,7 +276,10 @@ function renderAthletes(athletes) {
               <input class="name-edit-input" data-edit-name-for="${athlete.id}" value="${escapeAttr(athlete.name)}" maxlength="60" style="width:140px;" />
               <button class="name-edit-btn" type="submit" data-action="save-name" data-id="${athlete.id}" title="Salvar nome">Salvar</button>
             </form>
-            <span class="athlete-summary-arrow" style="font-size:1.2em;">${expanded ? '▲' : '▼'}</span>
+            <span class="expand-toggle-chip" aria-hidden="true">
+              <span class="expand-toggle-icon">${expanded ? '-' : '+'}</span>
+              <span class="expand-toggle-label">${expanded ? 'Ocultar' : 'Detalhes'}</span>
+            </span>
           </div>
           <div class="athlete-details" style="display:${expanded ? 'block' : 'none'};margin-top:0.7rem;">
             <div class="metrics-grid">
