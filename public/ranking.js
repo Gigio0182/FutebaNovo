@@ -1,7 +1,14 @@
 const rankingList = document.getElementById('ranking-list');
 const statusEl = document.getElementById('status');
 const rankingSearchInput = document.getElementById('ranking-search');
+const helpDialog = document.getElementById('help-dialog');
 let rankingCache = [];
+
+function openHelpDialog() {
+  if (helpDialog && typeof helpDialog.showModal === 'function') {
+    helpDialog.showModal();
+  }
+}
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -77,7 +84,7 @@ function renderRanking() {
             <div class="rank-name-meta" style="display:flex;align-items:center;gap:0.7rem;justify-content:space-between;width:100%;">
               <h3>${row.name}</h3>
               <div style="display:flex;flex-direction:column;align-items:flex-end;min-width:70px;width:100px;">
-                <span class="stat-pill stat-pontos" style="background:#059669;color:#fff;font-size:1.1rem;font-weight:800;padding:0.38rem 1.1rem;box-shadow:0 2px 8px #05966922;letter-spacing:0.5px;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;">${row.pontos}</span>
+                <span class="stat-pill stat-pontos" data-action="open-help" role="button" title="Ver como a pontuação é calculada" style="background:#059669;color:#fff;font-size:1.1rem;font-weight:800;padding:0.38rem 1.1rem;box-shadow:0 2px 8px #05966922;letter-spacing:0.5px;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;">${row.pontos}</span>
               </div>
             </div>
           </div>
@@ -99,11 +106,17 @@ function renderRanking() {
 // Ajuda de pontuação
 document.addEventListener('DOMContentLoaded', () => {
   const helpBtn = document.getElementById('help-btn');
-  const helpDialog = document.getElementById('help-dialog');
   const closeHelpBtn = document.getElementById('close-help-btn');
   if (helpBtn && helpDialog && closeHelpBtn) {
-    helpBtn.addEventListener('click', () => helpDialog.showModal());
+    helpBtn.addEventListener('click', openHelpDialog);
     closeHelpBtn.addEventListener('click', () => helpDialog.close());
+  }
+});
+
+rankingList.addEventListener('click', (event) => {
+  const pointsPill = event.target.closest('.stat-pontos[data-action="open-help"]');
+  if (pointsPill) {
+    openHelpDialog();
   }
 });
 
