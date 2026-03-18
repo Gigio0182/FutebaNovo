@@ -55,31 +55,81 @@ Acesse:
 
 ## Configuracao Firebase
 
-1. No Firebase Console, crie um projeto.
-2. Ative o Firestore Database.
-3. Gere uma Service Account (JSON).
-4. Opcao local: salve o arquivo como `firebase-service.json` na raiz do projeto.
-5. Opcao Vercel (recomendada): use variavel de ambiente com Base64.
+1. No Firebase Console, mantenha o projeto atual para producao (main).
+2. Crie um segundo projeto para nao-producao (compartilhado por DEV e QA).
+3. Ative o Firestore Database nos dois projetos.
+4. Gere uma Service Account (JSON) para cada projeto.
+5. Opcao local: salve o arquivo como `firebase-service.json` na raiz do projeto.
+6. Opcao Vercel (recomendada): use variavel de ambiente com Base64.
 
-### Gerar Base64 no PowerShell
+### Estrategia por branch
+
+- `main` -> Vercel `Production` -> Firebase de producao (atual/default).
+- `branch-DEV` e `branch-QA` -> Vercel `Preview` -> Firebase nao-producao.
+
+### Precedencia de variaveis no backend
+
+O backend procura credenciais nessa ordem:
+
+1. `FIREBASE_SERVICE_ACCOUNT_BASE64_<AMBIENTE>` (ex.: `_PRODUCTION`, `_PREVIEW`, `_QA`).
+2. `FIREBASE_SERVICE_ACCOUNT_JSON_<AMBIENTE>`.
+3. Variaveis legadas `FIREBASE_SERVICE_ACCOUNT_BASE64` ou `FIREBASE_SERVICE_ACCOUNT_JSON`.
+4. Arquivo local `firebase-service.json`.
+
+`<AMBIENTE>` vem de `FIREBASE_ENVIRONMENT` (ou `VERCEL_ENV` quando nao informado).
+
+## Gerar Base64 no PowerShell
+
+### Producao
 
 ```powershell
-[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content .\firebase-service.json -Raw)))
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content .\firebase-service-prod.json -Raw)))
+```
+
+### Nao-producao (DEV/QA)
+
+```powershell
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content .\firebase-service-preview.json -Raw)))
 ```
 
 ## Configurar na Vercel
 
-No dashboard do projeto, adicione:
+No dashboard do projeto, configure por escopo:
 
-- `FIREBASE_SERVICE_ACCOUNT_BASE64` = valor Base64 do JSON da service account.
-- `APP_ADMIN_PASSWORD` = senha de acesso do app (senha forte).
-- `APP_AUTH_SECRET` = segredo para assinatura de token (string longa aleatoria).
+### Production (branch `main`)
+
+- `FIREBASE_SERVICE_ACCOUNT_BASE64_PRODUCTION` = Base64 do JSON de producao.
+- `APP_ADMIN_PASSWORD` = senha forte.
+- `APP_AUTH_SECRET` = string longa aleatoria.
+
+### Preview (branches `branch-DEV` e `branch-QA`)
+
+- `FIREBASE_SERVICE_ACCOUNT_BASE64_PREVIEW` = Base64 do JSON do Firebase nao-producao.
+- `APP_ADMIN_PASSWORD` = senha de ambiente nao-producao.
+- `APP_AUTH_SECRET` = segredo do ambiente nao-producao.
+
+Opcionalmente, defina `FIREBASE_ENVIRONMENT=production` em Production e `FIREBASE_ENVIRONMENT=preview` em Preview. Sem isso, a Vercel ja expõe `VERCEL_ENV` e o backend usa esse valor automaticamente.
 
 Depois rode o deploy:
 
 ```bash
 npx vercel
 ```
+
+## Arquivo de exemplo de variaveis
+
+Use `.env.example` como referencia para setup local e de ambientes.
+
+## Passo a passo de criacao no Firebase
+
+1. Firebase Console -> Add project -> crie o projeto nao-producao (ex.: `app-futeba-preview`).
+2. Build -> Firestore Database -> Create database.
+3. Project settings -> Service accounts -> Generate new private key.
+4. Salve o JSON fora do repositorio e gere Base64 com os comandos acima.
+
+## Configuracao antiga (simples)
+
+Tambem funciona manter apenas `FIREBASE_SERVICE_ACCOUNT_BASE64` por ambiente na Vercel (Production e Preview), sem sufixos. O suporte legado foi mantido para compatibilidade.
 
 ## Endpoints
 
