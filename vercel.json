@@ -13,6 +13,10 @@
       "dest": "/ranking-domingo.html"
     },
     {
+      "src": "^/domingo/confirmados/?$",
+      "dest": "/confirmados-domingo.html"
+    },
+    {
       "src": "^/domingo/goleadores/?$",
       "dest": "/goleadores-domingo.html"
     },
@@ -31,6 +35,10 @@
     {
       "src": "^/ranking/?$",
       "dest": "/ranking.html"
+    },
+    {
+      "src": "^/confirmados/?$",
+      "dest": "/confirmados.html"
     },
     {
       "src": "^/goleadores/?$",

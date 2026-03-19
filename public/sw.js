@@ -4,6 +4,8 @@ const ASSETS = [
   '/domingo',
   '/athletes',
   '/domingo/athletes',
+  '/confirmados',
+  '/domingo/confirmados',
   '/ranking',
   '/domingo/ranking',
   '/goleadores',
@@ -21,6 +23,7 @@ const ASSETS = [
   '/goleadores-domingo.js',
   '/garcons.js',
   '/garcons-domingo.js',
+  '/confirmados.js',
   '/pwa.js',
   '/manifest.webmanifest',
   '/icon.svg'
