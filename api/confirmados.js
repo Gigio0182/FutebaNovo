@@ -11,12 +11,18 @@ function normalizeNames(rawNames) {
   const lines = Array.isArray(rawNames) ? rawNames : [];
 
   const names = lines
-    .map((line) =>
-      String(line || '')
-        .replace(/^\s*[-*\d.)]+\s*/, '')
-        .trim()
-    )
-    .filter((name) => !/\(\s*avulso\s*\)/i.test(name))
+    .map((line) => {
+      const text = String(line || '');
+      const match = text.match(/^\s*\d+\s*-\s*(.+)$/);
+      if (!match) {
+        return '';
+      }
+
+      return match[1]
+        .replace(/\(\s*avulso\s*\)/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+    })
     .filter(Boolean)
     .map((name) => name.slice(0, 60));
 

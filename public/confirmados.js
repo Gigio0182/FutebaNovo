@@ -45,8 +45,17 @@ function normalizeNames(text) {
     new Set(
       String(text || '')
         .split(/\r?\n/)
-        .map((line) => line.replace(/^\s*[-*\d.)]+\s*/, '').trim())
-        .filter((line) => !/\(\s*avulso\s*\)/i.test(line))
+        .map((line) => {
+          const match = String(line || '').match(/^\s*\d+\s*-\s*(.+)$/);
+          if (!match) {
+            return '';
+          }
+
+          return match[1]
+            .replace(/\(\s*avulso\s*\)/gi, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+        })
         .filter(Boolean)
     )
   );
