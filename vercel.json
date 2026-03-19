@@ -13,12 +13,20 @@
       "dest": "/ranking-domingo.html"
     },
     {
+      "src": "^/domingo/confirmados/?$",
+      "dest": "/confirmados-domingo.html"
+    },
+    {
       "src": "^/domingo/goleadores/?$",
       "dest": "/goleadores-domingo.html"
     },
     {
       "src": "^/domingo/garcons/?$",
       "dest": "/garcons-domingo.html"
+    },
+    {
+      "src": "^/domingo/participacoes/?$",
+      "dest": "/participacoes-domingo.html"
     },
     {
       "src": "^/$",
@@ -33,12 +41,20 @@
       "dest": "/ranking.html"
     },
     {
+      "src": "^/confirmados/?$",
+      "dest": "/confirmados.html"
+    },
+    {
       "src": "^/goleadores/?$",
       "dest": "/goleadores.html"
     },
     {
       "src": "^/garcons/?$",
       "dest": "/garcons.html"
+    },
+    {
+      "src": "^/participacoes/?$",
+      "dest": "/participacoes.html"
     },
     {
       "src": "^/api/(.*)$",

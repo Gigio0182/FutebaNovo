@@ -2,7 +2,20 @@ const rankingList = document.getElementById('ranking-list');
 const statusEl = document.getElementById('status');
 const rankingSearchInput = document.getElementById('ranking-search');
 const helpDialog = document.getElementById('help-dialog');
+const cornerAuthBtn = document.getElementById('corner-auth-btn');
+const TOKEN_KEY = 'app_futeba_domingo_token';
 let rankingCache = [];
+
+function updateCornerAuthButton() {
+  if (!cornerAuthBtn) {
+    return;
+  }
+
+  const isLoggedIn = Boolean(localStorage.getItem(TOKEN_KEY));
+  cornerAuthBtn.textContent = isLoggedIn ? 'Cadastro' : 'Login';
+  cornerAuthBtn.title = isLoggedIn ? 'Ir para cadastro' : 'Acessar area de login';
+  cornerAuthBtn.setAttribute('aria-label', cornerAuthBtn.title);
+}
 
 function openHelpDialog() {
   if (helpDialog && typeof helpDialog.showModal === 'function') {
@@ -105,11 +118,18 @@ function renderRanking() {
 document.addEventListener('DOMContentLoaded', () => {
   const helpBtn = document.getElementById('help-btn');
   const closeHelpBtn = document.getElementById('close-help-btn');
-  if (helpBtn && helpDialog && closeHelpBtn) {
+  if (helpBtn && helpDialog) {
     helpBtn.addEventListener('click', openHelpDialog);
+  }
+
+  if (closeHelpBtn && helpDialog) {
     closeHelpBtn.addEventListener('click', () => helpDialog.close());
   }
+
+  updateCornerAuthButton();
 });
+
+window.addEventListener('storage', updateCornerAuthButton);
 
 rankingList.addEventListener('click', (event) => {
   const pointsPill = event.target.closest('.stat-pontos[data-action="open-help"]');
@@ -120,4 +140,5 @@ rankingList.addEventListener('click', (event) => {
 
 rankingSearchInput.addEventListener('input', renderRanking);
 
+updateCornerAuthButton();
 loadRanking();

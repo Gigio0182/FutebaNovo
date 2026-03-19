@@ -27,14 +27,23 @@ function sanitizeGroup(groupRaw) {
 }
 
 function getAthletesCollectionName(req) {
+  return getCollectionNameByGroup('athletes', req);
+}
+
+function getConfirmadosCollectionName(req) {
+  return getCollectionNameByGroup('confirmados', req);
+}
+
+function getCollectionNameByGroup(baseName, req) {
   const group = sanitizeGroup(readGroupFromQuery(req));
   if (group === 'default') {
-    return 'athletes';
+    return baseName;
   }
 
-  return `athletes_${group}`;
+  return `${baseName}_${group}`;
 }
 
 module.exports = {
-  getAthletesCollectionName
+  getAthletesCollectionName,
+  getConfirmadosCollectionName
 };

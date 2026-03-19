@@ -133,6 +133,33 @@ module.exports = async (req, res) => {
       return;
     }
 
+    if (req.method === 'DELETE') {
+      if (!requireAuth(req, res)) {
+        return;
+      }
+
+      const body = await parseBody(req);
+      const idFromQuery = req.query && typeof req.query.id === 'string' ? req.query.id : '';
+      const id = String(idFromQuery || body.id || '').trim();
+
+      if (!id) {
+        sendJson(res, 400, { error: 'ID do atleta e obrigatorio.' });
+        return;
+      }
+
+      const docRef = athletesCollection.doc(id);
+      const currentSnap = await docRef.get();
+
+      if (!currentSnap.exists) {
+        sendJson(res, 200, { ok: true, deleted: false });
+        return;
+      }
+
+      await docRef.delete();
+      sendJson(res, 200, { ok: true, deleted: true });
+      return;
+    }
+
     sendJson(res, 405, { error: 'Metodo nao permitido.' });
   } catch (error) {
     sendJson(res, 500, { error: error.message });
