@@ -16,6 +16,7 @@ function normalizeNames(rawNames) {
         .replace(/^\s*[-*\d.)]+\s*/, '')
         .trim()
     )
+    .filter((name) => !/\(\s*avulso\s*\)/i.test(name))
     .filter(Boolean)
     .map((name) => name.slice(0, 60));
 
@@ -110,6 +111,21 @@ module.exports = async (req, res) => {
       );
 
       sendJson(res, 200, { ok: true, date, count: names.length });
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      const dateFromQuery = String((req.query && req.query.date) || '').trim();
+      const body = dateFromQuery ? {} : await parseBody(req);
+      const date = String(dateFromQuery || body.date || '').trim();
+
+      if (!isValidDate(date)) {
+        sendJson(res, 400, { error: 'Data invalida. Use o formato YYYY-MM-DD.' });
+        return;
+      }
+
+      await confirmadosCollection.doc(date).delete();
+      sendJson(res, 200, { ok: true, date });
       return;
     }
 

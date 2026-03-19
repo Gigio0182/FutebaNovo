@@ -629,6 +629,14 @@ textarea {
   margin: 0;
 }
 
+.confirmados-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .confirmados-count {
   display: inline-flex;
   align-items: center;
@@ -638,6 +646,35 @@ textarea {
   color: #13524d;
   font-weight: 700;
   font-size: 0.85rem;
+}
+
+.confirmados-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.confirmados-action-btn {
+  width: auto;
+  margin-top: 0;
+  border: 0;
+  border-radius: 0.55rem;
+  padding: 0.36rem 0.6rem;
+  background: #1f6feb;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.confirmados-action-btn.danger {
+  background: #b91c1c;
+}
+
+.confirmados-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #2c5652;
 }
 
 .confirmados-names {
@@ -693,6 +730,10 @@ textarea {
 
   .confirmados-names {
     columns: 1;
+  }
+
+  .confirmados-head-right {
+    justify-content: flex-start;
   }
 
 }

@@ -2,11 +2,38 @@ const confirmadosForm = document.getElementById('confirmados-form');
 const matchDateInput = document.getElementById('match-date');
 const confirmedNamesInput = document.getElementById('confirmed-names');
 const confirmadosListEl = document.getElementById('confirmados-list');
+const clearFormBtn = document.getElementById('clear-form-btn');
 const statusEl = document.getElementById('status');
 const TOKEN_KEY = document.body.dataset.group === 'domingo'
   ? 'app_futeba_domingo_token'
   : 'app_futeba_token';
-const GROUP_QUERY = document.body.dataset.group ? `?group=${encodeURIComponent(document.body.dataset.group)}` : '';
+const GROUP_VALUE = document.body.dataset.group || '';
+let recordsCache = [];
+
+function buildApiUrl(extraParams = {}) {
+  const params = new URLSearchParams();
+  if (GROUP_VALUE) {
+    params.set('group', GROUP_VALUE);
+  }
+
+  Object.entries(extraParams).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim()) {
+      params.set(key, String(value).trim());
+    }
+  });
+
+  const query = params.toString();
+  return query ? `/api/confirmados?${query}` : '/api/confirmados';
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -19,6 +46,7 @@ function normalizeNames(text) {
       String(text || '')
         .split(/\r?\n/)
         .map((line) => line.replace(/^\s*[-*\d.)]+\s*/, '').trim())
+        .filter((line) => !/\(\s*avulso\s*\)/i.test(line))
         .filter(Boolean)
     )
   );
@@ -49,10 +77,16 @@ function renderRecords(records) {
       <article class="confirmados-item">
         <div class="confirmados-item-head">
           <h3>${formatDate(record.date)}</h3>
-          <span class="confirmados-count">${record.count} confirmados</span>
+          <div class="confirmados-head-right">
+            <span class="confirmados-count">${record.count} confirmados</span>
+            <div class="confirmados-actions">
+              <button class="confirmados-action-btn" type="button" data-action="edit-record" data-date="${record.date}">Editar</button>
+              <button class="confirmados-action-btn danger" type="button" data-action="delete-record" data-date="${record.date}">Remover</button>
+            </div>
+          </div>
         </div>
         <ul class="confirmados-names">
-          ${(record.names || []).map((name) => `<li>${name}</li>`).join('')}
+          ${(record.names || []).map((name) => `<li>${escapeHtml(name)}</li>`).join('')}
         </ul>
       </article>
     `)
@@ -84,8 +118,9 @@ async function request(url, options = {}) {
 }
 
 async function loadRecords() {
-  const data = await request(`/api/confirmados${GROUP_QUERY}`);
-  renderRecords(data.records || []);
+  const data = await request(buildApiUrl());
+  recordsCache = data.records || [];
+  renderRecords(recordsCache);
 }
 
 function setDefaultDate() {
@@ -94,6 +129,17 @@ function setDefaultDate() {
     .toISOString()
     .slice(0, 10);
   matchDateInput.value = localIso;
+}
+
+function resetForm() {
+  setDefaultDate();
+  confirmedNamesInput.value = '';
+}
+
+function fillFormFromRecord(record) {
+  matchDateInput.value = record.date;
+  confirmedNamesInput.value = (record.names || []).join('\n');
+  confirmedNamesInput.focus();
 }
 
 confirmadosForm.addEventListener('submit', async (event) => {
@@ -113,18 +159,64 @@ confirmadosForm.addEventListener('submit', async (event) => {
       return;
     }
 
-    await request(`/api/confirmados${GROUP_QUERY}`, {
+    await request(buildApiUrl(), {
       method: 'POST',
       body: JSON.stringify({ date, names })
     });
 
-    confirmedNamesInput.value = '';
+    resetForm();
     await loadRecords();
-    setStatus('Lista de confirmados salva com sucesso.');
+    setStatus('Lista de confirmados salva com sucesso. Se a data ja existia, a lista foi atualizada.');
   } catch (error) {
     setStatus(error.message, true);
   }
 });
+
+confirmadosListEl.addEventListener('click', async (event) => {
+  const editBtn = event.target.closest('button[data-action="edit-record"][data-date]');
+  if (editBtn) {
+    const record = recordsCache.find((item) => item.date === editBtn.dataset.date);
+    if (!record) {
+      return;
+    }
+
+    fillFormFromRecord(record);
+    setStatus(`Modo edicao ativado para ${formatDate(record.date)}. Altere e salve novamente.`);
+    return;
+  }
+
+  const deleteBtn = event.target.closest('button[data-action="delete-record"][data-date]');
+  if (!deleteBtn) {
+    return;
+  }
+
+  const date = deleteBtn.dataset.date;
+  const confirmed = window.confirm(`Remover a lista de ${formatDate(date)}?`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await request(buildApiUrl({ date }), {
+      method: 'DELETE'
+    });
+
+    await loadRecords();
+    if (matchDateInput.value === date) {
+      resetForm();
+    }
+    setStatus(`Lista de ${formatDate(date)} removida com sucesso.`);
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+});
+
+if (clearFormBtn) {
+  clearFormBtn.addEventListener('click', () => {
+    resetForm();
+    setStatus('Formulario limpo.');
+  });
+}
 
 setDefaultDate();
 loadRecords().then(() => {
