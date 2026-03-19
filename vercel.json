@@ -25,6 +25,10 @@
       "dest": "/garcons-domingo.html"
     },
     {
+      "src": "^/domingo/participacoes/?$",
+      "dest": "/participacoes-domingo.html"
+    },
+    {
       "src": "^/$",
       "dest": "/index.html"
     },
@@ -47,6 +51,10 @@
     {
       "src": "^/garcons/?$",
       "dest": "/garcons.html"
+    },
+    {
+      "src": "^/participacoes/?$",
+      "dest": "/participacoes.html"
     },
     {
       "src": "^/api/(.*)$",
