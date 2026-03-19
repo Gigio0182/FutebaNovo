@@ -17,4 +17,19 @@ window.addEventListener('DOMContentLoaded', () => {
   badge.className = 'version-badge';
   badge.textContent = APP_VERSION;
   document.body.appendChild(badge);
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (target.type === 'search') {
+      target.blur();
+    }
+  });
 });
