@@ -130,6 +130,18 @@ function addLocalAthlete(name, localId) {
   applySearchFilter();
 }
 
+function removeAthleteLocal(athleteId) {
+  athletesCache = athletesCache.filter((athlete) => athlete.id !== athleteId);
+  if (expandedAthleteId === athleteId) {
+    expandedAthleteId = null;
+  }
+  if (editingNameAthleteId === athleteId) {
+    editingNameAthleteId = null;
+  }
+  saveAthletesCache();
+  applySearchFilter();
+}
+
 function replaceAthleteId(oldId, newAthlete) {
   athletesCache = athletesCache.map((athlete) =>
     athlete.id === oldId
@@ -197,6 +209,13 @@ async function flushQueue() {
             id: action.id,
             name: action.name
           })
+        });
+      }
+
+      if (action.type === 'delete-athlete') {
+        await request('/api/athletes', {
+          method: 'DELETE',
+          body: JSON.stringify({ id: action.id })
         });
       }
 
@@ -289,6 +308,9 @@ function renderAthletes(athletes) {
               ${metricCard(athlete, 'mvp', 'MVP')}
               ${metricCard(athlete, 'worst', 'Pior em campo')}
             </div>
+            <div class="athlete-danger-row">
+              <button class="delete-athlete-btn" type="button" data-action="delete-athlete" data-id="${athlete.id}">Remover atleta</button>
+            </div>
           </div>
         </article>
       `;
@@ -376,6 +398,40 @@ athletesList.addEventListener('click', async (event) => {
     if (editingNameAthleteId === athleteId) return;
     expandedAthleteId = expandedAthleteId === athleteId ? null : athleteId;
     applySearchFilter();
+    return;
+  }
+
+  const deleteButton = event.target.closest('button[data-action="delete-athlete"][data-id]');
+  if (deleteButton) {
+    const athleteId = deleteButton.dataset.id;
+    const athlete = athletesCache.find((item) => item.id === athleteId);
+    if (!athlete) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Remover atleta ${athlete.name}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    removeAthleteLocal(athleteId);
+
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'delete-athlete', id: athleteId });
+      setStatus('Remocao salva offline. Sera sincronizada automaticamente.');
+      return;
+    }
+
+    try {
+      await request('/api/athletes', {
+        method: 'DELETE',
+        body: JSON.stringify({ id: athleteId })
+      });
+      setStatus('Atleta removido com sucesso.');
+    } catch (error) {
+      await loadAthletes(true);
+      setStatus(error.message, true);
+    }
     return;
   }
 
