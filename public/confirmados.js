@@ -46,7 +46,7 @@ function normalizeNames(text) {
       String(text || '')
         .split(/\r?\n/)
         .map((line) => {
-          const match = String(line || '').match(/^\s*\d+\s*-\s*(.+)$/);
+          const match = String(line || '').match(/^\s*\d+\s*[-–—]\s*(.+)$/u);
           if (!match) {
             return '';
           }

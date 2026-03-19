@@ -13,12 +13,10 @@ function normalizeNames(rawNames) {
   const names = lines
     .map((line) => {
       const text = String(line || '');
-      const match = text.match(/^\s*\d+\s*-\s*(.+)$/);
-      if (!match) {
-        return '';
-      }
+      const match = text.match(/^\s*\d+\s*[-–—]\s*(.+)$/u);
+      const candidate = match ? match[1] : text;
 
-      return match[1]
+      return candidate
         .replace(/\(\s*avulso\s*\)/gi, '')
         .replace(/\s{2,}/g, ' ')
         .trim();
