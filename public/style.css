@@ -696,6 +696,20 @@ textarea {
   color: #2c5652;
 }
 
+.confirmados-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.confirmados-field input,
+.confirmados-field textarea {
+  margin-top: 0;
+}
+
+.confirmados-date-field input {
+  max-width: 240px;
+}
+
 .confirmados-names {
   margin: 0;
   padding-left: 1.1rem;
