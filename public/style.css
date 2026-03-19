@@ -133,6 +133,10 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
@@ -262,6 +266,12 @@ button {
   padding: 0.58rem;
   border-radius: 0.6rem;
   border: 1px solid #cfdad7;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
 }
 
 .btn {
