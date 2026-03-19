@@ -424,13 +424,11 @@ athletesList.addEventListener('click', async (event) => {
   if (nameSpan) {
     editingNameAthleteId = nameSpan.dataset.id;
     applySearchFilter();
-    setTimeout(() => {
-      const input = athletesList.querySelector(`input[data-edit-name-for="${editingNameAthleteId}"]`);
-      if (input) {
-        input.focus();
-        input.select();
-      }
-    }, 0);
+    const input = athletesList.querySelector(`input[data-edit-name-for="${editingNameAthleteId}"]`);
+    if (input) {
+      input.focus();
+      input.select();
+    }
     return;
   }
 
