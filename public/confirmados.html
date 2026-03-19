@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>App Futeba | Atletas Confirmados</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>Atletas Confirmados</h1>
+        <p>Cole a lista da semana e acompanhe os confirmados por data da partida.</p>
+        <div class="hero-actions">
+          <a class="btn secondary" href="/athletes">Voltar ao Cadastro</a>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Importar Lista da Semana</h2>
+        <form id="confirmados-form" class="grid-form">
+          <label>
+            Data da partida
+            <input id="match-date" type="date" required />
+          </label>
+          <label>
+            Lista de nomes (1 por linha)
+            <textarea id="confirmed-names" rows="8" placeholder="Exemplo:
+1. Joao
+2. Carlos
+3. Matheus" required></textarea>
+          </label>
+          <button class="btn" type="submit">Salvar Confirmados</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Confirmados por Data</h2>
+        <div id="confirmados-list" class="confirmados-list"></div>
+      </section>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script src="/confirmados.js"></script>
+    <script src="/pwa.js"></script>
+  </body>
+</html>

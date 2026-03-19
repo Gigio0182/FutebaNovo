@@ -604,6 +604,53 @@ textarea {
   background: #ffe4e4;
 }
 
+.confirmados-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.confirmados-item {
+  border: 1px solid #dce7e4;
+  border-radius: 0.8rem;
+  padding: 0.8rem;
+  background: #fff;
+}
+
+.confirmados-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.confirmados-item-head h3 {
+  margin: 0;
+}
+
+.confirmados-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #ecf7f3;
+  color: #13524d;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.confirmados-names {
+  margin: 0;
+  padding-left: 1.1rem;
+  columns: 2;
+  column-gap: 1.2rem;
+}
+
+.confirmados-names li {
+  margin-bottom: 0.22rem;
+}
+
 @media (max-width: 680px) {
   .hero,
   .card {
@@ -642,6 +689,10 @@ textarea {
   .metric-btn {
     min-width: 48px;
     padding: 0.56rem 0.75rem;
+  }
+
+  .confirmados-names {
+    columns: 1;
   }
 
 }
