@@ -120,8 +120,11 @@ function renderRanking() {
 document.addEventListener('DOMContentLoaded', () => {
   const helpBtn = document.getElementById('help-btn');
   const closeHelpBtn = document.getElementById('close-help-btn');
-  if (helpBtn && helpDialog && closeHelpBtn) {
+  if (helpBtn && helpDialog) {
     helpBtn.addEventListener('click', openHelpDialog);
+  }
+
+  if (closeHelpBtn && helpDialog) {
     closeHelpBtn.addEventListener('click', () => helpDialog.close());
   }
 
