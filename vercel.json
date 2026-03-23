@@ -17,6 +17,10 @@
       "dest": "/confirmados-domingo.html"
     },
     {
+      "src": "^/domingo/partidas/?$",
+      "dest": "/partidas-domingo.html"
+    },
+    {
       "src": "^/domingo/goleadores/?$",
       "dest": "/goleadores-domingo.html"
     },
@@ -43,6 +47,10 @@
     {
       "src": "^/confirmados/?$",
       "dest": "/confirmados.html"
+    },
+    {
+      "src": "^/partidas/?$",
+      "dest": "/partidas.html"
     },
     {
       "src": "^/goleadores/?$",
