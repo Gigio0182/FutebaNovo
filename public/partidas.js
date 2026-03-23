@@ -11,6 +11,7 @@ const TEAMS_STORAGE_KEY = GROUP_VALUE
 let recordsCache = [];
 let expandedDate = null;
 const teamsByDate = new Map();
+let athleteIdByKey = new Map();
 
 function buildApiUrl(extraParams = {}) {
   const params = new URLSearchParams();
@@ -26,6 +27,13 @@ function buildApiUrl(extraParams = {}) {
 
   const query = params.toString();
   return query ? `/api/confirmados?${query}` : '/api/confirmados';
+}
+
+function buildAthletesApiUrl() {
+  if (!GROUP_VALUE) {
+    return '/api/athletes';
+  }
+  return `/api/athletes?group=${encodeURIComponent(GROUP_VALUE)}`;
 }
 
 function escapeHtml(value) {
@@ -185,13 +193,25 @@ function renderExpandedDetails(record) {
         <div class="confirmados-team-card">
           <h4>Time A (${teams.teamA.length})</h4>
           <ul class="confirmados-team-list">
-            ${teams.teamA.map((name) => `<li><span>${escapeHtml(name)}</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
+            ${teams.teamA.map((name) => `
+              <li>
+                <button class="partidas-stat-btn" type="button" data-action="add-assist" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                <span>${escapeHtml(name)}</span>
+                <button class="partidas-stat-btn" type="button" data-action="add-goal" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+              </li>
+            `).join('') || '<li><span>Sem atletas</span></li>'}
           </ul>
         </div>
         <div class="confirmados-team-card">
           <h4>Time B (${teams.teamB.length})</h4>
           <ul class="confirmados-team-list">
-            ${teams.teamB.map((name) => `<li><span>${escapeHtml(name)}</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
+            ${teams.teamB.map((name) => `
+              <li>
+                <button class="partidas-stat-btn" type="button" data-action="add-assist" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                <span>${escapeHtml(name)}</span>
+                <button class="partidas-stat-btn" type="button" data-action="add-goal" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+              </li>
+            `).join('') || '<li><span>Sem atletas</span></li>'}
           </ul>
         </div>
       </div>
@@ -270,6 +290,20 @@ async function loadRecords() {
   renderRecords(recordsCache);
 }
 
+async function loadAthleteIdMap() {
+  const data = await request(buildAthletesApiUrl());
+  const map = new Map();
+
+  (data.athletes || []).forEach((athlete) => {
+    const key = normalizeNameKey(athlete.name);
+    if (key && !map.has(key) && athlete.id) {
+      map.set(key, athlete.id);
+    }
+  });
+
+  athleteIdByKey = map;
+}
+
 function assignPlayer(date, playerName, targetTeam) {
   const record = recordsCache.find((item) => item.date === date);
   if (!record) {
@@ -296,6 +330,31 @@ function assignPlayer(date, playerName, targetTeam) {
   renderRecords(recordsCache);
 }
 
+async function addMetricToAthlete(playerName, field, successMessage) {
+  const key = normalizeNameKey(playerName);
+  if (!key) {
+    return;
+  }
+
+  let athleteId = athleteIdByKey.get(key);
+  if (!athleteId) {
+    await loadAthleteIdMap();
+    athleteId = athleteIdByKey.get(key);
+  }
+
+  if (!athleteId) {
+    setStatus(`Atleta ${playerName} nao encontrado no cadastro.`, true);
+    return;
+  }
+
+  await request(buildAthletesApiUrl(), {
+    method: 'PUT',
+    body: JSON.stringify({ id: athleteId, field, delta: 1 })
+  });
+
+  setStatus(successMessage);
+}
+
 confirmadosListEl.addEventListener('click', (event) => {
   const toggleBtn = event.target.closest('button[data-action="toggle-date"][data-date]');
   if (toggleBtn) {
@@ -317,10 +376,26 @@ confirmadosListEl.addEventListener('click', (event) => {
     assignPlayer(date, player, target);
     return;
   }
+
+  const goalBtn = event.target.closest('button[data-action="add-goal"][data-player]');
+  if (goalBtn) {
+    const player = String(goalBtn.dataset.player || '').trim();
+    addMetricToAthlete(player, 'goals', `Gol adicionado para ${player}.`)
+      .catch((error) => setStatus(error.message, true));
+    return;
+  }
+
+  const assistBtn = event.target.closest('button[data-action="add-assist"][data-player]');
+  if (assistBtn) {
+    const player = String(assistBtn.dataset.player || '').trim();
+    addMetricToAthlete(player, 'assists', `Assistencia adicionada para ${player}.`)
+      .catch((error) => setStatus(error.message, true));
+    return;
+  }
 });
 
 loadTeams();
-loadRecords().then(() => {
+Promise.all([loadAthleteIdMap(), loadRecords()]).then(() => {
   setStatus('Partidas carregadas com base nos confirmados por data.');
 }).catch((error) => {
   setStatus(error.message, true);
