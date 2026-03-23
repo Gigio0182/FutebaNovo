@@ -419,22 +419,12 @@ athleteForm.addEventListener('submit', async (event) => {
 
 
 athletesList.addEventListener('click', async (event) => {
-  // Iniciar edição do nome ao clicar no nome (não expande nem colapsa)
-  const nameSpan = event.target.closest('.athlete-summary-name[data-action="edit-name"][data-id]');
-  if (nameSpan) {
-    editingNameAthleteId = nameSpan.dataset.id;
-    applySearchFilter();
-    const input = athletesList.querySelector(`input[data-edit-name-for="${editingNameAthleteId}"]`);
-    if (input) {
-      input.focus();
-      input.select();
-    }
-    return;
-  }
-
-  // Expand/collapse athlete details (mas não se estiver editando o nome)
+  // Expand/collapse athlete details with a single click on the summary row.
   const summaryRow = event.target.closest('.athlete-summary-row[data-action="toggle-expand"][data-id]');
   if (summaryRow) {
+    if (event.target.closest('.athlete-edit-name-form')) {
+      return;
+    }
     const athleteId = summaryRow.dataset.id;
     if (editingNameAthleteId === athleteId) return;
     expandedAthleteId = expandedAthleteId === athleteId ? null : athleteId;
@@ -505,6 +495,23 @@ athletesList.addEventListener('click', async (event) => {
       setStatus(error.message, true);
     }
     return;
+  }
+});
+
+athletesList.addEventListener('dblclick', (event) => {
+  const nameSpan = event.target.closest('.athlete-summary-name[data-action="edit-name"][data-id]');
+  if (!nameSpan) {
+    return;
+  }
+
+  editingNameAthleteId = nameSpan.dataset.id;
+  expandedAthleteId = editingNameAthleteId;
+  applySearchFilter();
+
+  const input = athletesList.querySelector(`input[data-edit-name-for="${editingNameAthleteId}"]`);
+  if (input) {
+    input.focus();
+    input.select();
   }
 });
 
