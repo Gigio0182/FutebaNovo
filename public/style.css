@@ -800,6 +800,85 @@ textarea {
   font-size: 0.82rem;
 }
 
+.partidas-date-toggle {
+  width: 100%;
+  margin-top: 0;
+  border: 1px solid #d5e4df;
+  border-radius: 0.7rem;
+  background: #f6fbf9;
+  color: #18423f;
+  padding: 0.65rem 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.partidas-date-meta {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2a5a56;
+}
+
+.partidas-date-chevron {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f766e;
+}
+
+.partidas-details {
+  margin-top: 0.7rem;
+}
+
+.partidas-subtitle {
+  margin: 0 0 0.45rem;
+  font-size: 0.96rem;
+  color: #204b47;
+}
+
+.partidas-player-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.partidas-player-list li {
+  border: 1px solid #e1ece8;
+  border-radius: 0.55rem;
+  background: #fcfffd;
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.partidas-player-list li span {
+  overflow-wrap: anywhere;
+}
+
+.partidas-player-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.partidas-team-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+  background: #e7f4f1;
+  color: #115e59;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 @media (max-width: 680px) {
   .hero,
   .card {
@@ -859,6 +938,16 @@ textarea {
 
   .confirmados-teams {
     grid-template-columns: 1fr;
+  }
+
+  .partidas-date-toggle {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .partidas-player-list li {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
 }
