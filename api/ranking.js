@@ -2,6 +2,16 @@ const { getDb } = require('./_lib/firebase');
 const { handleOptions, sendJson } = require('./_lib/http');
 const { getAthletesCollectionName } = require('./_lib/group');
 
+function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0 }) {
+  const pontos =
+    (Number(games) * 0.5) +
+    (Number(assists) * 1.5) +
+    (Number(goals) * 2.5) +
+    (Number(mvp) * 3) -
+    (Number(worst) * 0.5);
+  return Math.max(0, Math.round(pontos * 100) / 100);
+}
+
 module.exports = async (req, res) => {
   if (handleOptions(req, res)) {
     return;
@@ -33,14 +43,16 @@ module.exports = async (req, res) => {
           goals,
           assists,
           mvp,
-          worst
+          worst,
+          points: calcularPontos({ games, goals, assists, mvp, worst })
         };
       })
       .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
         if (b.goals !== a.goals) return b.goals - a.goals;
         if (b.assists !== a.assists) return b.assists - a.assists;
-        if (b.games !== a.games) return b.games - a.games;
         if (b.mvp !== a.mvp) return b.mvp - a.mvp;
+        if (b.games !== a.games) return b.games - a.games;
         if (a.worst !== b.worst) return a.worst - b.worst;
         return a.name.localeCompare(b.name, 'pt-BR');
       });
