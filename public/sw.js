@@ -1,4 +1,4 @@
-const CACHE_NAME = 'app-futeba-v3';
+const CACHE_NAME = 'app-futeba-v4';
 const ASSETS = [
   '/',
   '/domingo',

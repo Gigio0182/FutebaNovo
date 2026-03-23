@@ -10,6 +10,7 @@ const QUEUE_KEY = 'app_futeba_domingo_offline_queue';
 const CACHE_KEY = 'app_futeba_domingo_athletes_cache';
 let athletesCache = [];
 let syncInProgress = false;
+let expandedAthleteId = null;
 let editingNameAthleteId = null;
 
 function escapeAttr(value) {
@@ -171,6 +172,9 @@ function addLocalAthlete(name, localId) {
 
 function removeAthleteLocal(athleteId) {
   athletesCache = athletesCache.filter((athlete) => athlete.id !== athleteId);
+  if (expandedAthleteId === athleteId) {
+    expandedAthleteId = null;
+  }
   if (editingNameAthleteId === athleteId) {
     editingNameAthleteId = null;
   }
@@ -322,24 +326,32 @@ function renderAthletes(athletes) {
 
   athletesList.innerHTML = athletes
     .map((athlete) => {
+      const expanded = expandedAthleteId === athlete.id;
       const editingName = editingNameAthleteId === athlete.id;
       return `
-      <article class="athlete-item ${athlete.pending ? 'pending' : ''}">
-        <div class="athlete-header-row">
+      <article class="athlete-item ${athlete.pending ? 'pending' : ''}${expanded ? ' expanded' : ''}" data-athlete-id="${athlete.id}">
+        <div class="athlete-header-row athlete-summary-row" style="cursor:pointer;user-select:none;gap:0.7rem;" data-action="toggle-expand" data-id="${athlete.id}">
           <span class="athlete-summary-name" data-action="edit-name" data-id="${athlete.id}" style="flex:1;cursor:pointer;font-weight:700;${editingName ? 'display:none;' : ''}">${escapeAttr(athlete.name)}</span>
           <form class="athlete-edit-name-form" data-id="${athlete.id}" style="display:${editingName ? 'flex' : 'none'};align-items:center;flex:1;" onsubmit="return false;">
             <input class="name-edit-input" data-edit-name-for="${athlete.id}" value="${escapeAttr(athlete.name)}" maxlength="60" style="width:140px;" />
           </form>
+          <button class="name-edit-btn" type="button" data-action="start-edit-name" data-id="${athlete.id}" style="display:${editingName ? 'none' : 'inline-block'};">Editar</button>
+          <span class="expand-toggle-chip" aria-hidden="true">
+            <span class="expand-toggle-icon">${expanded ? '-' : '+'}</span>
+            <span class="expand-toggle-label">${expanded ? 'Ocultar' : 'Detalhes'}</span>
+          </span>
         </div>
-        <div class="metrics-grid">
-          ${metricCard(athlete, 'goals', 'Gols')}
-          ${metricCard(athlete, 'assists', 'Assistencias')}
-          ${metricCard(athlete, 'games', 'Jogos')}
-          ${metricCard(athlete, 'mvp', 'MVP')}
-          ${metricCard(athlete, 'worst', 'Pior em campo')}
-        </div>
-        <div class="athlete-danger-row">
-          <button class="delete-athlete-btn" type="button" data-action="delete-athlete" data-id="${athlete.id}">Remover atleta</button>
+        <div class="athlete-details" style="display:${expanded ? 'block' : 'none'};margin-top:0.7rem;">
+          <div class="metrics-grid">
+            ${metricCard(athlete, 'goals', 'Gols')}
+            ${metricCard(athlete, 'assists', 'Assistencias')}
+            ${metricCard(athlete, 'games', 'Jogos')}
+            ${metricCard(athlete, 'mvp', 'MVP')}
+            ${metricCard(athlete, 'worst', 'Pior em campo')}
+          </div>
+          <div class="athlete-danger-row">
+            <button class="delete-athlete-btn" type="button" data-action="delete-athlete" data-id="${athlete.id}">Remover atleta</button>
+          </div>
         </div>
       </article>
     `;
@@ -407,15 +419,30 @@ athleteForm.addEventListener('submit', async (event) => {
 });
 
 athletesList.addEventListener('click', async (event) => {
-  const nameSpan = event.target.closest('.athlete-summary-name[data-action="edit-name"][data-id]');
-  if (nameSpan) {
-    editingNameAthleteId = nameSpan.dataset.id;
+  const editButton = event.target.closest('button[data-action="start-edit-name"][data-id]');
+  if (editButton) {
+    editingNameAthleteId = editButton.dataset.id;
+    expandedAthleteId = editingNameAthleteId;
     applySearchFilter();
     const input = athletesList.querySelector(`input[data-edit-name-for="${editingNameAthleteId}"]`);
     if (input) {
       input.focus();
       input.select();
     }
+    return;
+  }
+
+  const summaryRow = event.target.closest('.athlete-summary-row[data-action="toggle-expand"][data-id]');
+  if (summaryRow) {
+    if (event.target.closest('.athlete-edit-name-form')) {
+      return;
+    }
+    const athleteId = summaryRow.dataset.id;
+    if (editingNameAthleteId === athleteId) {
+      return;
+    }
+    expandedAthleteId = expandedAthleteId === athleteId ? null : athleteId;
+    applySearchFilter();
     return;
   }
 

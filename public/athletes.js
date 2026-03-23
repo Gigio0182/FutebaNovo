@@ -335,6 +335,7 @@ function renderAthletes(athletes) {
             <form class="athlete-edit-name-form" data-id="${athlete.id}" style="display:${editingName ? 'flex' : 'none'};align-items:center;flex:1;" onsubmit="return false;">
               <input class="name-edit-input" data-edit-name-for="${athlete.id}" value="${escapeAttr(athlete.name)}" maxlength="60" style="width:140px;" />
             </form>
+            <button class="name-edit-btn" type="button" data-action="start-edit-name" data-id="${athlete.id}" style="display:${editingName ? 'none' : 'inline-block'};">Editar</button>
             <span class="expand-toggle-chip" aria-hidden="true">
               <span class="expand-toggle-icon">${expanded ? '-' : '+'}</span>
               <span class="expand-toggle-label">${expanded ? 'Ocultar' : 'Detalhes'}</span>
@@ -419,10 +420,10 @@ athleteForm.addEventListener('submit', async (event) => {
 
 
 athletesList.addEventListener('click', async (event) => {
-  // Iniciar edição do nome ao clicar no nome (não expande nem colapsa)
-  const nameSpan = event.target.closest('.athlete-summary-name[data-action="edit-name"][data-id]');
-  if (nameSpan) {
-    editingNameAthleteId = nameSpan.dataset.id;
+  const editButton = event.target.closest('button[data-action="start-edit-name"][data-id]');
+  if (editButton) {
+    editingNameAthleteId = editButton.dataset.id;
+    expandedAthleteId = editingNameAthleteId;
     applySearchFilter();
     const input = athletesList.querySelector(`input[data-edit-name-for="${editingNameAthleteId}"]`);
     if (input) {
@@ -432,9 +433,12 @@ athletesList.addEventListener('click', async (event) => {
     return;
   }
 
-  // Expand/collapse athlete details (mas não se estiver editando o nome)
+  // Expand/collapse athlete details with a single click on the summary row.
   const summaryRow = event.target.closest('.athlete-summary-row[data-action="toggle-expand"][data-id]');
   if (summaryRow) {
+    if (event.target.closest('.athlete-edit-name-form')) {
+      return;
+    }
     const athleteId = summaryRow.dataset.id;
     if (editingNameAthleteId === athleteId) return;
     expandedAthleteId = expandedAthleteId === athleteId ? null : athleteId;
