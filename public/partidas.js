@@ -181,8 +181,6 @@ function renderExpandedDetails(record) {
               <span>${escapeHtml(name)}</span>
               <div class="partidas-player-actions">
                 <span class="partidas-team-badge">${teamLabel}</span>
-                <button class="confirmados-move-btn" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A" ${assignedTeam === 'A' ? 'disabled' : ''}>A</button>
-                <button class="confirmados-move-btn" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B" ${assignedTeam === 'B' ? 'disabled' : ''}>B</button>
               </div>
             </li>
           `;
@@ -304,32 +302,6 @@ async function loadAthleteIdMap() {
   athleteIdByKey = map;
 }
 
-function assignPlayer(date, playerName, targetTeam) {
-  const record = recordsCache.find((item) => item.date === date);
-  if (!record) {
-    return;
-  }
-
-  const teams = getTeamsForRecord(record);
-  const playerKey = normalizeNameKey(playerName);
-  const canonicalName = (record.names || []).find((name) => normalizeNameKey(name) === playerKey) || playerName;
-
-  teams.teamA = (teams.teamA || []).filter((name) => normalizeNameKey(name) !== playerKey);
-  teams.teamB = (teams.teamB || []).filter((name) => normalizeNameKey(name) !== playerKey);
-
-  if (targetTeam === 'A') {
-    teams.teamA.push(canonicalName);
-  }
-
-  if (targetTeam === 'B') {
-    teams.teamB.push(canonicalName);
-  }
-
-  teamsByDate.set(date, sanitizeTeamsForRecord(record, teams));
-  saveTeams();
-  renderRecords(recordsCache);
-}
-
 async function addMetricToAthlete(playerName, field, successMessage) {
   const key = normalizeNameKey(playerName);
   if (!key) {
@@ -361,19 +333,6 @@ confirmadosListEl.addEventListener('click', (event) => {
     const date = toggleBtn.dataset.date;
     expandedDate = expandedDate === date ? null : date;
     renderRecords(recordsCache);
-    return;
-  }
-
-  const assignBtn = event.target.closest('button[data-action="assign-player"][data-date][data-player][data-target]');
-  if (assignBtn) {
-    const date = assignBtn.dataset.date;
-    const player = String(assignBtn.dataset.player || '').trim();
-    const target = assignBtn.dataset.target;
-    if (!date || !player || (target !== 'A' && target !== 'B')) {
-      return;
-    }
-
-    assignPlayer(date, player, target);
     return;
   }
 
