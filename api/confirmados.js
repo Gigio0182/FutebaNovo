@@ -107,6 +107,16 @@ function normalizeAssistsByName(rawAssists, namesMap) {
   return normalized;
 }
 
+function calculateTeamScore(teamNames, goalsByName) {
+  const team = Array.isArray(teamNames) ? teamNames : [];
+  const goals = goalsByName && typeof goalsByName === 'object' ? goalsByName : {};
+
+  return team.reduce((total, name) => {
+    const key = normalizeNameKey(name);
+    return total + Number(goals[key] || 0);
+  }, 0);
+}
+
 async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso) {
   if (!athleteName || !field || !delta) {
     return;
@@ -348,8 +358,8 @@ module.exports = async (req, res) => {
       const teamB = normalizeTeams(currentData.teamB, namesMap);
       const goalsByName = normalizeGoalsByName(currentData.goalsByName, namesMap);
       const assistsByName = normalizeAssistsByName(currentData.assistsByName, namesMap);
-      const scoreA = Number(currentData.scoreA || 0);
-      const scoreB = Number(currentData.scoreB || 0);
+      const scoreA = calculateTeamScore(teamA, goalsByName);
+      const scoreB = calculateTeamScore(teamB, goalsByName);
 
       await syncAthletesGames(db, req, previousNames, names, now);
 
@@ -433,10 +443,15 @@ module.exports = async (req, res) => {
           filteredB.push(canonicalName);
         }
 
+        scoreA = calculateTeamScore(filteredA, goalsByName);
+        scoreB = calculateTeamScore(filteredB, goalsByName);
+
         await docRef.set(
           {
             teamA: filteredA,
             teamB: filteredB,
+            scoreA,
+            scoreB,
             updatedAt: now
           },
           { merge: true }
@@ -446,7 +461,9 @@ module.exports = async (req, res) => {
           ok: true,
           date,
           teamA: filteredA,
-          teamB: filteredB
+          teamB: filteredB,
+          scoreA,
+          scoreB
         });
         return;
       }
