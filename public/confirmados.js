@@ -101,6 +101,14 @@ function getGoalsForName(record, name) {
   return Number(goalsByName[key] || 0);
 }
 
+function getAssistsForName(record, name) {
+  const key = normalizeNameKey(name);
+  const assistsByName = record.assistsByName && typeof record.assistsByName === 'object'
+    ? record.assistsByName
+    : {};
+  return Number(assistsByName[key] || 0);
+}
+
 function getAssignedTeam(record, name) {
   const key = normalizeNameKey(name);
   const teamA = Array.isArray(record.teamA) ? record.teamA : [];
@@ -185,7 +193,8 @@ function renderRecords(records) {
               <ul class="confirmados-team-list">
                 ${teamA.map((name) => `
                   <li>
-                    <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽)</span>
+                    <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                    <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span>
                     <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
                   </li>
                 `).join('') || '<li><span>Sem atletas</span></li>'}
@@ -196,7 +205,8 @@ function renderRecords(records) {
               <ul class="confirmados-team-list">
                 ${teamB.map((name) => `
                   <li>
-                    <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽)</span>
+                    <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                    <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span>
                     <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
                   </li>
                 `).join('') || '<li><span>Sem atletas</span></li>'}
@@ -283,6 +293,17 @@ async function registerGoal(date, playerName) {
   });
 }
 
+async function registerAssist(date, playerName) {
+  await request(buildApiUrl(), {
+    method: 'PUT',
+    body: JSON.stringify({
+      action: 'add-assist',
+      date,
+      name: playerName
+    })
+  });
+}
+
 confirmadosForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
@@ -356,6 +377,25 @@ confirmadosListEl.addEventListener('click', async (event) => {
       expandedRecordDate = date;
       await loadRecords();
       setStatus(`Gol registrado para ${player}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    return;
+  }
+
+  const assistBtn = event.target.closest('button[data-action="add-assist"][data-date][data-player]');
+  if (assistBtn) {
+    const date = assistBtn.dataset.date;
+    const player = String(assistBtn.dataset.player || '').trim();
+    if (!date || !player) {
+      return;
+    }
+
+    try {
+      await registerAssist(date, player);
+      expandedRecordDate = date;
+      await loadRecords();
+      setStatus(`Assistencia registrada para ${player}.`);
     } catch (error) {
       setStatus(error.message, true);
     }

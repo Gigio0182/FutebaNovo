@@ -90,6 +90,23 @@ function normalizeGoalsByName(rawGoals, namesMap) {
   return normalized;
 }
 
+function normalizeAssistsByName(rawAssists, namesMap) {
+  const source = rawAssists && typeof rawAssists === 'object' ? rawAssists : {};
+  const normalized = {};
+
+  Object.entries(source).forEach(([key, value]) => {
+    const normalizedKey = normalizeNameKey(key);
+    if (!normalizedKey || !namesMap.has(normalizedKey)) {
+      return;
+    }
+
+    const current = Number(value || 0);
+    normalized[normalizedKey] = Math.max(0, current);
+  });
+
+  return normalized;
+}
+
 async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso) {
   if (!athleteName || !field || !delta) {
     return;
@@ -253,6 +270,7 @@ module.exports = async (req, res) => {
         const teamA = normalizeTeams(data.teamA, namesMap);
         const teamB = normalizeTeams(data.teamB, namesMap);
         const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
+        const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
         sendJson(res, 200, {
           records: [
             {
@@ -264,6 +282,7 @@ module.exports = async (req, res) => {
               scoreA: Number(data.scoreA || 0),
               scoreB: Number(data.scoreB || 0),
               goalsByName,
+              assistsByName,
               updatedAt: data.updatedAt || null
             }
           ]
@@ -279,6 +298,7 @@ module.exports = async (req, res) => {
         const teamA = normalizeTeams(data.teamA, namesMap);
         const teamB = normalizeTeams(data.teamB, namesMap);
         const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
+        const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
         return {
           date: data.date || doc.id,
           names,
@@ -288,6 +308,7 @@ module.exports = async (req, res) => {
           scoreA: Number(data.scoreA || 0),
           scoreB: Number(data.scoreB || 0),
           goalsByName,
+          assistsByName,
           updatedAt: data.updatedAt || null
         };
       });
@@ -326,6 +347,7 @@ module.exports = async (req, res) => {
       const teamA = normalizeTeams(currentData.teamA, namesMap);
       const teamB = normalizeTeams(currentData.teamB, namesMap);
       const goalsByName = normalizeGoalsByName(currentData.goalsByName, namesMap);
+      const assistsByName = normalizeAssistsByName(currentData.assistsByName, namesMap);
       const scoreA = Number(currentData.scoreA || 0);
       const scoreB = Number(currentData.scoreB || 0);
 
@@ -338,6 +360,7 @@ module.exports = async (req, res) => {
           teamA,
           teamB,
           goalsByName,
+          assistsByName,
           scoreA,
           scoreB,
           createdAt: current.exists ? current.data().createdAt || now : now,
@@ -388,6 +411,7 @@ module.exports = async (req, res) => {
       const teamA = normalizeTeams(data.teamA, namesMap);
       const teamB = normalizeTeams(data.teamB, namesMap);
       const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
+      const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
       let scoreA = Number(data.scoreA || 0);
       let scoreB = Number(data.scoreB || 0);
 
@@ -465,6 +489,38 @@ module.exports = async (req, res) => {
           scoreA,
           scoreB,
           goalsByName
+        });
+        return;
+      }
+
+      if (action === 'add-assist') {
+        const key = normalizeNameKey(canonicalName);
+        const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
+        const inTeamB = teamB.some((name) => normalizeNameKey(name) === key);
+
+        if (!inTeamA && !inTeamB) {
+          sendJson(res, 400, { error: 'Defina o time do atleta antes de registrar assistencia.' });
+          return;
+        }
+
+        assistsByName[key] = Number(assistsByName[key] || 0) + 1;
+
+        await docRef.set(
+          {
+            assistsByName,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        await incrementAthleteMetric(db, req, canonicalName, 'assists', 1, now);
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: canonicalName,
+          assists: assistsByName[key],
+          assistsByName
         });
         return;
       }

@@ -64,6 +64,14 @@ function getGoalsForName(record, name) {
   return Number(goalsByName[key] || 0);
 }
 
+function getAssistsForName(record, name) {
+  const key = normalizeNameKey(name);
+  const assistsByName = record.assistsByName && typeof record.assistsByName === 'object'
+    ? record.assistsByName
+    : {};
+  return Number(assistsByName[key] || 0);
+}
+
 function renderRecords(records) {
   if (!records.length) {
     confirmadosListEl.innerHTML = '<p>Nenhuma partida encontrada.</p>';
@@ -94,13 +102,13 @@ function renderRecords(records) {
           <div class="confirmados-team-card">
             <h4>Time A (${teamA.length})</h4>
             <ul class="confirmados-team-list">
-              ${teamA.map((name) => `<li><span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽)</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
+              ${teamA.map((name) => `<li><span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
             </ul>
           </div>
           <div class="confirmados-team-card">
             <h4>Time B (${teamB.length})</h4>
             <ul class="confirmados-team-list">
-              ${teamB.map((name) => `<li><span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽)</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
+              ${teamB.map((name) => `<li><span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
             </ul>
           </div>
         </div>
