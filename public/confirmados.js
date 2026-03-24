@@ -72,12 +72,11 @@ function normalizeNames(text) {
       String(text || '')
         .split(/\r?\n/)
         .map((line) => {
-          const match = String(line || '').match(/^\s*\d+\s*[-.)]\s*(.+)$/);
-          if (!match) {
-            return '';
-          }
+          const raw = String(line || '');
+          const match = raw.match(/^\s*\d+\s*[-.)–—]\s*(.+)$/u);
+          const candidate = match ? match[1] : raw;
 
-          return match[1]
+          return candidate
             .replace(/\(\s*avulso\s*\)/gi, '')
             .replace(/\s{2,}/g, ' ')
             .trim();
