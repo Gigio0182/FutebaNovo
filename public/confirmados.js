@@ -8,12 +8,8 @@ const TOKEN_KEY = document.body.dataset.group === 'domingo'
   ? 'app_futeba_domingo_token'
   : 'app_futeba_token';
 const GROUP_VALUE = document.body.dataset.group || '';
-const TEAMS_STORAGE_KEY = GROUP_VALUE
-  ? `app_futeba_partidas_teams_${GROUP_VALUE}`
-  : 'app_futeba_partidas_teams';
 
 let recordsCache = [];
-const teamsByDate = new Map();
 let expandedRecordDate = null;
 
 function buildApiUrl(extraParams = {}) {
@@ -97,87 +93,27 @@ function formatDate(dateText) {
   });
 }
 
-function saveTeams() {
-  const payload = {};
-  teamsByDate.forEach((teams, date) => {
-    payload[date] = {
-      teamA: Array.isArray(teams.teamA) ? teams.teamA : [],
-      teamB: Array.isArray(teams.teamB) ? teams.teamB : []
-    };
-  });
-
-  localStorage.setItem(TEAMS_STORAGE_KEY, JSON.stringify(payload));
-}
-
-function loadTeams() {
-  try {
-    const raw = localStorage.getItem(TEAMS_STORAGE_KEY);
-    if (!raw) {
-      return;
-    }
-
-    const parsed = JSON.parse(raw);
-    Object.entries(parsed).forEach(([date, teams]) => {
-      teamsByDate.set(date, {
-        teamA: Array.isArray(teams.teamA) ? teams.teamA : [],
-        teamB: Array.isArray(teams.teamB) ? teams.teamB : []
-      });
-    });
-  } catch (error) {
-    teamsByDate.clear();
-  }
-}
-
-function sanitizeTeamsForRecord(record, teams) {
-  const names = Array.isArray(record.names) ? record.names : [];
-  const nameByKey = new Map();
-  names.forEach((name) => {
-    const key = normalizeNameKey(name);
-    if (key && !nameByKey.has(key)) {
-      nameByKey.set(key, name);
-    }
-  });
-
-  const usedKeys = new Set();
-  const teamA = [];
-  const teamB = [];
-
-  (teams.teamA || []).forEach((name) => {
-    const key = normalizeNameKey(name);
-    if (!key || usedKeys.has(key) || !nameByKey.has(key)) {
-      return;
-    }
-    usedKeys.add(key);
-    teamA.push(nameByKey.get(key));
-  });
-
-  (teams.teamB || []).forEach((name) => {
-    const key = normalizeNameKey(name);
-    if (!key || usedKeys.has(key) || !nameByKey.has(key)) {
-      return;
-    }
-    usedKeys.add(key);
-    teamB.push(nameByKey.get(key));
-  });
-
-  return { teamA, teamB };
-}
-
-function getTeamsForRecord(record) {
-  const existing = teamsByDate.get(record.date) || { teamA: [], teamB: [] };
-  const sanitized = sanitizeTeamsForRecord(record, existing);
-  teamsByDate.set(record.date, sanitized);
-  return sanitized;
-}
-
-function getAssignedTeam(name, teams) {
+function getGoalsForName(record, name) {
   const key = normalizeNameKey(name);
-  if ((teams.teamA || []).some((item) => normalizeNameKey(item) === key)) {
+  const goalsByName = record.goalsByName && typeof record.goalsByName === 'object'
+    ? record.goalsByName
+    : {};
+  return Number(goalsByName[key] || 0);
+}
+
+function getAssignedTeam(record, name) {
+  const key = normalizeNameKey(name);
+  const teamA = Array.isArray(record.teamA) ? record.teamA : [];
+  const teamB = Array.isArray(record.teamB) ? record.teamB : [];
+
+  if (teamA.some((item) => normalizeNameKey(item) === key)) {
     return 'A';
   }
-  if ((teams.teamB || []).some((item) => normalizeNameKey(item) === key)) {
+
+  if (teamB.some((item) => normalizeNameKey(item) === key)) {
     return 'B';
   }
+
   return '';
 }
 
@@ -188,23 +124,17 @@ function renderRecords(records) {
   }
 
   const validDates = new Set(records.map((record) => record.date));
-  let changed = false;
-
-  Array.from(teamsByDate.keys()).forEach((date) => {
-    if (!validDates.has(date)) {
-      teamsByDate.delete(date);
-      changed = true;
-    }
-  });
-
   if (expandedRecordDate && !validDates.has(expandedRecordDate)) {
     expandedRecordDate = null;
   }
 
   confirmadosListEl.innerHTML = records
     .map((record) => {
-      const teams = getTeamsForRecord(record);
       const isExpanded = expandedRecordDate === record.date;
+      const scoreA = Number(record.scoreA || 0);
+      const scoreB = Number(record.scoreB || 0);
+      const teamA = Array.isArray(record.teamA) ? record.teamA : [];
+      const teamB = Array.isArray(record.teamB) ? record.teamB : [];
 
       return `
       <article class="confirmados-item">
@@ -223,11 +153,17 @@ function renderRecords(records) {
               <button class="confirmados-action-btn danger" type="button" data-action="delete-record" data-date="${record.date}">Remover</button>
             </div>
           </div>
-          
+
+          <div class="partidas-scoreboard">
+            <span>Time A: <strong>${scoreA}</strong></span>
+            <span class="partidas-score-sep">x</span>
+            <span>Time B: <strong>${scoreB}</strong></span>
+          </div>
+
           <h4 class="partidas-subtitle">Selecionar time dos atletas</h4>
           <ul class="partidas-player-list">
             ${(record.names || []).map((name) => {
-              const assignedTeam = getAssignedTeam(name, teams);
+              const assignedTeam = getAssignedTeam(record, name);
               const teamLabel = assignedTeam ? `Time ${assignedTeam}` : 'Sem time';
 
               return `
@@ -242,16 +178,37 @@ function renderRecords(records) {
               `;
             }).join('')}
           </ul>
+
+          <div class="confirmados-teams">
+            <div class="confirmados-team-card">
+              <h4>Time A (${teamA.length})</h4>
+              <ul class="confirmados-team-list">
+                ${teamA.map((name) => `
+                  <li>
+                    <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽)</span>
+                    <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+                  </li>
+                `).join('') || '<li><span>Sem atletas</span></li>'}
+              </ul>
+            </div>
+            <div class="confirmados-team-card">
+              <h4>Time B (${teamB.length})</h4>
+              <ul class="confirmados-team-list">
+                ${teamB.map((name) => `
+                  <li>
+                    <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽)</span>
+                    <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+                  </li>
+                `).join('') || '<li><span>Sem atletas</span></li>'}
+              </ul>
+            </div>
+          </div>
         </div>
         ` : ''}
       </article>
     `;
     })
     .join('');
-
-  if (changed) {
-    saveTeams();
-  }
 }
 
 async function request(url, options = {}) {
@@ -303,30 +260,27 @@ function fillFormFromRecord(record) {
   confirmedNamesInput.focus();
 }
 
-function assignPlayer(date, playerName, targetTeam) {
-  const record = recordsCache.find((item) => item.date === date);
-  if (!record) {
-    return;
-  }
+async function updateTeam(date, playerName, team) {
+  await request(buildApiUrl(), {
+    method: 'PUT',
+    body: JSON.stringify({
+      action: 'set-team',
+      date,
+      name: playerName,
+      team
+    })
+  });
+}
 
-  const teams = getTeamsForRecord(record);
-  const playerKey = normalizeNameKey(playerName);
-  const canonicalName = (record.names || []).find((name) => normalizeNameKey(name) === playerKey) || playerName;
-
-  teams.teamA = (teams.teamA || []).filter((name) => normalizeNameKey(name) !== playerKey);
-  teams.teamB = (teams.teamB || []).filter((name) => normalizeNameKey(name) !== playerKey);
-
-  if (targetTeam === 'A') {
-    teams.teamA.push(canonicalName);
-  }
-
-  if (targetTeam === 'B') {
-    teams.teamB.push(canonicalName);
-  }
-
-  teamsByDate.set(date, sanitizeTeamsForRecord(record, teams));
-  saveTeams();
-  renderRecords(recordsCache);
+async function registerGoal(date, playerName) {
+  await request(buildApiUrl(), {
+    method: 'PUT',
+    body: JSON.stringify({
+      action: 'add-goal',
+      date,
+      name: playerName
+    })
+  });
 }
 
 confirmadosForm.addEventListener('submit', async (event) => {
@@ -351,6 +305,7 @@ confirmadosForm.addEventListener('submit', async (event) => {
       body: JSON.stringify({ date, names })
     });
 
+    expandedRecordDate = date;
     resetForm();
     await loadRecords();
     setStatus('Lista de confirmados salva com sucesso. Se a data ja existia, a lista foi atualizada.');
@@ -377,7 +332,33 @@ confirmadosListEl.addEventListener('click', async (event) => {
       return;
     }
 
-    assignPlayer(date, player, target);
+    try {
+      await updateTeam(date, player, target);
+      expandedRecordDate = date;
+      await loadRecords();
+      setStatus(`Time do atleta ${player} atualizado para ${target}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    return;
+  }
+
+  const goalBtn = event.target.closest('button[data-action="add-goal"][data-date][data-player]');
+  if (goalBtn) {
+    const date = goalBtn.dataset.date;
+    const player = String(goalBtn.dataset.player || '').trim();
+    if (!date || !player) {
+      return;
+    }
+
+    try {
+      await registerGoal(date, player);
+      expandedRecordDate = date;
+      await loadRecords();
+      setStatus(`Gol registrado para ${player}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
     return;
   }
 
@@ -409,8 +390,9 @@ confirmadosListEl.addEventListener('click', async (event) => {
       method: 'DELETE'
     });
 
-    teamsByDate.delete(date);
-    saveTeams();
+    if (expandedRecordDate === date) {
+      expandedRecordDate = null;
+    }
 
     await loadRecords();
     if (matchDateInput.value === date) {
@@ -430,7 +412,6 @@ if (clearFormBtn) {
 }
 
 setDefaultDate();
-loadTeams();
 loadRecords().then(() => {
   setStatus('Listas carregadas.');
 }).catch((error) => {

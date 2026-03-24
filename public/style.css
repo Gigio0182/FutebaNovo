@@ -893,6 +893,23 @@ textarea {
   font-weight: 700;
 }
 
+.partidas-scoreboard {
+  margin: 0.45rem 0 0.7rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.7rem;
+  border: 1px solid #d5e7e2;
+  background: #f3faf8;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 800;
+  color: #184a46;
+}
+
+.partidas-score-sep {
+  color: #0f766e;
+}
+
 @media (max-width: 680px) {
   .hero,
   .card {

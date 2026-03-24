@@ -56,6 +56,89 @@ function mapNamesByKey(names) {
   return map;
 }
 
+function normalizeTeams(rawTeam, namesMap) {
+  const list = Array.isArray(rawTeam) ? rawTeam : [];
+  const usedKeys = new Set();
+  const normalized = [];
+
+  list.forEach((name) => {
+    const key = normalizeNameKey(name);
+    if (!key || usedKeys.has(key) || !namesMap.has(key)) {
+      return;
+    }
+    usedKeys.add(key);
+    normalized.push(namesMap.get(key));
+  });
+
+  return normalized;
+}
+
+function normalizeGoalsByName(rawGoals, namesMap) {
+  const source = rawGoals && typeof rawGoals === 'object' ? rawGoals : {};
+  const normalized = {};
+
+  Object.entries(source).forEach(([key, value]) => {
+    const normalizedKey = normalizeNameKey(key);
+    if (!normalizedKey || !namesMap.has(normalizedKey)) {
+      return;
+    }
+
+    const current = Number(value || 0);
+    normalized[normalizedKey] = Math.max(0, current);
+  });
+
+  return normalized;
+}
+
+async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso) {
+  if (!athleteName || !field || !delta) {
+    return;
+  }
+
+  const athletesCollection = db.collection(getAthletesCollectionName(req));
+  const snapshot = await athletesCollection.get();
+  const targetKey = normalizeNameKey(athleteName);
+  let targetDoc = null;
+
+  snapshot.docs.forEach((doc) => {
+    if (targetDoc) {
+      return;
+    }
+    const data = doc.data() || {};
+    const key = normalizeNameKey(data.name);
+    if (key === targetKey) {
+      targetDoc = { id: doc.id, data };
+    }
+  });
+
+  if (!targetDoc) {
+    const created = await athletesCollection.add({
+      name: athleteName,
+      goals: field === 'goals' ? Math.max(0, delta) : 0,
+      assists: field === 'assists' ? Math.max(0, delta) : 0,
+      games: 0,
+      mvp: 0,
+      worst: 0,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    });
+
+    return created.id;
+  }
+
+  const currentValue = Number(targetDoc.data[field] || 0);
+  const nextValue = Math.max(0, currentValue + delta);
+  await athletesCollection.doc(targetDoc.id).set(
+    {
+      [field]: nextValue,
+      updatedAt: nowIso
+    },
+    { merge: true }
+  );
+
+  return targetDoc.id;
+}
+
 async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
   const athletesCollection = db.collection(getAthletesCollectionName(req));
   const athletesSnapshot = await athletesCollection.get();
@@ -145,10 +228,6 @@ module.exports = async (req, res) => {
     return;
   }
 
-  if (!requireAuth(req, res)) {
-    return;
-  }
-
   try {
     const db = getDb();
     const confirmadosCollection = db.collection(getConfirmadosCollectionName(req));
@@ -169,12 +248,22 @@ module.exports = async (req, res) => {
         }
 
         const data = doc.data() || {};
+        const names = Array.isArray(data.names) ? data.names : [];
+        const namesMap = mapNamesByKey(names);
+        const teamA = normalizeTeams(data.teamA, namesMap);
+        const teamB = normalizeTeams(data.teamB, namesMap);
+        const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
         sendJson(res, 200, {
           records: [
             {
               date: dateRaw,
-              names: Array.isArray(data.names) ? data.names : [],
-              count: Array.isArray(data.names) ? data.names.length : 0,
+              names,
+              count: names.length,
+              teamA,
+              teamB,
+              scoreA: Number(data.scoreA || 0),
+              scoreB: Number(data.scoreB || 0),
+              goalsByName,
               updatedAt: data.updatedAt || null
             }
           ]
@@ -186,10 +275,19 @@ module.exports = async (req, res) => {
       const records = snapshot.docs.map((doc) => {
         const data = doc.data() || {};
         const names = Array.isArray(data.names) ? data.names : [];
+        const namesMap = mapNamesByKey(names);
+        const teamA = normalizeTeams(data.teamA, namesMap);
+        const teamB = normalizeTeams(data.teamB, namesMap);
+        const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
         return {
           date: data.date || doc.id,
           names,
           count: names.length,
+          teamA,
+          teamB,
+          scoreA: Number(data.scoreA || 0),
+          scoreB: Number(data.scoreB || 0),
+          goalsByName,
           updatedAt: data.updatedAt || null
         };
       });
@@ -199,6 +297,10 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
+      if (!requireAuth(req, res)) {
+        return;
+      }
+
       const body = await parseBody(req);
       const date = String(body.date || '').trim();
       const names = normalizeNames(body.names);
@@ -219,6 +321,13 @@ module.exports = async (req, res) => {
       const previousNames = current.exists
         ? normalizeNames((current.data() || {}).names)
         : [];
+      const namesMap = mapNamesByKey(names);
+      const currentData = current.exists ? current.data() || {} : {};
+      const teamA = normalizeTeams(currentData.teamA, namesMap);
+      const teamB = normalizeTeams(currentData.teamB, namesMap);
+      const goalsByName = normalizeGoalsByName(currentData.goalsByName, namesMap);
+      const scoreA = Number(currentData.scoreA || 0);
+      const scoreB = Number(currentData.scoreB || 0);
 
       await syncAthletesGames(db, req, previousNames, names, now);
 
@@ -226,6 +335,11 @@ module.exports = async (req, res) => {
         {
           date,
           names,
+          teamA,
+          teamB,
+          goalsByName,
+          scoreA,
+          scoreB,
           createdAt: current.exists ? current.data().createdAt || now : now,
           updatedAt: now
         },
@@ -236,7 +350,134 @@ module.exports = async (req, res) => {
       return;
     }
 
+    if (req.method === 'PUT') {
+      if (!requireAuth(req, res)) {
+        return;
+      }
+
+      const body = await parseBody(req);
+      const action = String(body.action || '').trim();
+      const date = String(body.date || '').trim();
+      const rawName = String(body.name || '').trim();
+      const team = String(body.team || '').trim().toUpperCase();
+
+      if (!isValidDate(date)) {
+        sendJson(res, 400, { error: 'Data invalida. Use o formato YYYY-MM-DD.' });
+        return;
+      }
+
+      const docRef = confirmadosCollection.doc(date);
+      const current = await docRef.get();
+      if (!current.exists) {
+        sendJson(res, 404, { error: 'Partida nao encontrada para a data informada.' });
+        return;
+      }
+
+      const data = current.data() || {};
+      const names = normalizeNames(data.names);
+      const namesMap = mapNamesByKey(names);
+      const nameKey = normalizeNameKey(rawName);
+      const canonicalName = namesMap.get(nameKey);
+
+      if (!canonicalName) {
+        sendJson(res, 400, { error: 'Atleta nao encontrado na lista de confirmados da data.' });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const teamA = normalizeTeams(data.teamA, namesMap);
+      const teamB = normalizeTeams(data.teamB, namesMap);
+      const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
+      let scoreA = Number(data.scoreA || 0);
+      let scoreB = Number(data.scoreB || 0);
+
+      if (action === 'set-team') {
+        if (team !== 'A' && team !== 'B') {
+          sendJson(res, 400, { error: 'Time invalido. Use A ou B.' });
+          return;
+        }
+
+        const key = normalizeNameKey(canonicalName);
+        const filteredA = teamA.filter((name) => normalizeNameKey(name) !== key);
+        const filteredB = teamB.filter((name) => normalizeNameKey(name) !== key);
+
+        if (team === 'A') {
+          filteredA.push(canonicalName);
+        }
+
+        if (team === 'B') {
+          filteredB.push(canonicalName);
+        }
+
+        await docRef.set(
+          {
+            teamA: filteredA,
+            teamB: filteredB,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          teamA: filteredA,
+          teamB: filteredB
+        });
+        return;
+      }
+
+      if (action === 'add-goal') {
+        const key = normalizeNameKey(canonicalName);
+        const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
+        const inTeamB = teamB.some((name) => normalizeNameKey(name) === key);
+
+        if (!inTeamA && !inTeamB) {
+          sendJson(res, 400, { error: 'Defina o time do atleta antes de registrar gol.' });
+          return;
+        }
+
+        goalsByName[key] = Number(goalsByName[key] || 0) + 1;
+        if (inTeamA) {
+          scoreA += 1;
+        }
+        if (inTeamB) {
+          scoreB += 1;
+        }
+
+        await docRef.set(
+          {
+            goalsByName,
+            scoreA,
+            scoreB,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        await incrementAthleteMetric(db, req, canonicalName, 'goals', 1, now);
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: canonicalName,
+          goals: goalsByName[key],
+          scoreA,
+          scoreB,
+          goalsByName
+        });
+        return;
+      }
+
+      sendJson(res, 400, { error: 'Acao invalida para atualizacao.' });
+      return;
+    }
+
     if (req.method === 'DELETE') {
+      if (!requireAuth(req, res)) {
+        return;
+      }
+
       const dateFromQuery = String((req.query && req.query.date) || '').trim();
       const body = dateFromQuery ? {} : await parseBody(req);
       const date = String(dateFromQuery || body.date || '').trim();
