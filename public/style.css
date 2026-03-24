@@ -973,9 +973,16 @@ textarea {
 }
 
 .partidas-date-meta {
-  font-size: 0.85rem;
+  font-size: 0.76rem;
   font-weight: 700;
-  color: #2a5a56;
+  color: #52726d;
+}
+
+.partidas-date-title {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #123c38;
+  letter-spacing: 0.15px;
 }
 
 .partidas-date-chevron {
@@ -1212,6 +1219,10 @@ textarea {
   .partidas-date-toggle {
     grid-template-columns: 1fr;
     gap: 0.2rem;
+  }
+
+  .partidas-date-title {
+    font-size: 1rem;
   }
 
   .partidas-scoreboard {

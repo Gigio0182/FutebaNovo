@@ -185,7 +185,7 @@ function renderRecords(records) {
       return `
       <article class="confirmados-item partidas-collapsible-item">
         <button class="partidas-date-toggle" type="button" data-date-toggle data-date="${dateValue}" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-controls="${detailsId}">
-          <span>${formatDate(record.date)}</span>
+          <span class="partidas-date-title">${formatDate(record.date)}</span>
           <span class="partidas-date-meta">${confirmadosCount} confirmados</span>
           <span class="partidas-date-chevron">${isExpanded ? 'Recolher' : 'Expandir'}</span>
         </button>
