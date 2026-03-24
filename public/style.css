@@ -1042,7 +1042,7 @@ textarea {
   font-size: 0.88rem;
   color: #4a716c;
   font-weight: 700;
-  text-align: right;
+  text-align: center;
 }
 
 @media (max-width: 680px) {
