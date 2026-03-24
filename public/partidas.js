@@ -6,6 +6,7 @@ const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
 const AUTO_REFRESH_MS = 3000;
 let isLoadingRecords = false;
+const expandedRecordDates = new Set();
 
 function updateCornerAuthButton() {
   if (!cornerAuthBtn) {
@@ -135,8 +136,17 @@ function attachDateToggleHandlers() {
       }
 
       const isExpanded = button.getAttribute('aria-expanded') === 'true';
+      const date = button.getAttribute('data-date') || '';
       button.setAttribute('aria-expanded', String(!isExpanded));
       detailsEl.hidden = isExpanded;
+
+      if (date) {
+        if (isExpanded) {
+          expandedRecordDates.delete(date);
+        } else {
+          expandedRecordDates.add(date);
+        }
+      }
 
       const chevron = button.querySelector('.partidas-date-chevron');
       if (chevron) {
@@ -152,6 +162,13 @@ function renderRecords(records) {
     return;
   }
 
+  const availableDates = new Set(records.map((record) => String(record.date || '')));
+  Array.from(expandedRecordDates).forEach((date) => {
+    if (!availableDates.has(date)) {
+      expandedRecordDates.delete(date);
+    }
+  });
+
   confirmadosListEl.innerHTML = records
     .map((record) => {
       const teamA = Array.isArray(record.teamA) ? record.teamA : [];
@@ -161,17 +178,19 @@ function renderRecords(records) {
       const eventsA = buildTeamEvents(record, teamA);
       const eventsB = buildTeamEvents(record, teamB);
       const confirmadosCount = Number(record.count || 0) || (teamA.length + teamB.length);
-      const detailsId = `partidas-details-${String(record.date || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+      const dateValue = String(record.date || '');
+      const detailsId = `partidas-details-${dateValue.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+      const isExpanded = expandedRecordDates.has(dateValue);
 
       return `
       <article class="confirmados-item partidas-collapsible-item">
-        <button class="partidas-date-toggle" type="button" data-date-toggle aria-expanded="false" aria-controls="${detailsId}">
+        <button class="partidas-date-toggle" type="button" data-date-toggle data-date="${dateValue}" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-controls="${detailsId}">
           <span>${formatDate(record.date)}</span>
           <span class="partidas-date-meta">${confirmadosCount} confirmados</span>
-          <span class="partidas-date-chevron">Expandir</span>
+          <span class="partidas-date-chevron">${isExpanded ? 'Recolher' : 'Expandir'}</span>
         </button>
 
-        <div id="${detailsId}" class="partidas-details" hidden>
+        <div id="${detailsId}" class="partidas-details" ${isExpanded ? '' : 'hidden'}>
           <div class="partidas-scoreboard">
             <div class="partidas-score-col">
               <p class="partidas-score-team-label">Time A</p>
