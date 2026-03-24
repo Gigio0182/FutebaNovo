@@ -139,8 +139,6 @@ function renderRecords(records) {
   confirmadosListEl.innerHTML = records
     .map((record) => {
       const isExpanded = expandedRecordDate === record.date;
-      const scoreA = Number(record.scoreA || 0);
-      const scoreB = Number(record.scoreB || 0);
       const teamA = Array.isArray(record.teamA) ? record.teamA : [];
       const teamB = Array.isArray(record.teamB) ? record.teamB : [];
 
@@ -162,23 +160,10 @@ function renderRecords(records) {
             </div>
           </div>
 
-          <div class="partidas-scoreboard confirmados-scoreboard">
-            <div class="partidas-score-col">
-              <p class="partidas-score-team-label">Time A</p>
-              <p class="partidas-score-value">${scoreA}</p>
-            </div>
-            <span class="partidas-score-sep" aria-hidden="true">x</span>
-            <div class="partidas-score-col">
-              <p class="partidas-score-team-label">Time B</p>
-              <p class="partidas-score-value">${scoreB}</p>
-            </div>
-          </div>
-
           <h4 class="partidas-subtitle">Selecionar time dos atletas</h4>
           <ul class="partidas-player-list confirmados-assign-list">
             ${(record.names || []).map((name) => {
               const assignedTeam = getAssignedTeam(record, name);
-              const teamLabel = assignedTeam ? `No Time ${assignedTeam}` : 'Sem time';
 
               return `
                 <li class="confirmados-assign-row">
@@ -187,7 +172,6 @@ function renderRecords(records) {
                     <button class="confirmados-team-btn ${assignedTeam === 'A' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A">A</button>
                     <button class="confirmados-team-btn ${assignedTeam === 'B' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B">B</button>
                   </div>
-                  <span class="partidas-team-badge">${teamLabel}</span>
                 </li>
               `;
             }).join('')}
