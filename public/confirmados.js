@@ -162,26 +162,32 @@ function renderRecords(records) {
             </div>
           </div>
 
-          <div class="partidas-scoreboard">
-            <span>Time A: <strong>${scoreA}</strong></span>
-            <span class="partidas-score-sep">x</span>
-            <span>Time B: <strong>${scoreB}</strong></span>
+          <div class="partidas-scoreboard confirmados-scoreboard">
+            <div class="partidas-score-col">
+              <p class="partidas-score-team-label">Time A</p>
+              <p class="partidas-score-value">${scoreA}</p>
+            </div>
+            <span class="partidas-score-sep" aria-hidden="true">x</span>
+            <div class="partidas-score-col">
+              <p class="partidas-score-team-label">Time B</p>
+              <p class="partidas-score-value">${scoreB}</p>
+            </div>
           </div>
 
           <h4 class="partidas-subtitle">Selecionar time dos atletas</h4>
-          <ul class="partidas-player-list">
+          <ul class="partidas-player-list confirmados-assign-list">
             ${(record.names || []).map((name) => {
               const assignedTeam = getAssignedTeam(record, name);
-              const teamLabel = assignedTeam ? `Time ${assignedTeam}` : 'Sem time';
+              const teamLabel = assignedTeam ? `No Time ${assignedTeam}` : 'Sem time';
 
               return `
-                <li>
-                  <span>${escapeHtml(name)}</span>
-                  <div class="partidas-player-actions">
-                    <span class="partidas-team-badge">${teamLabel}</span>
-                    <button class="confirmados-move-btn" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A" ${assignedTeam === 'A' ? 'disabled' : ''}>A</button>
-                    <button class="confirmados-move-btn" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B" ${assignedTeam === 'B' ? 'disabled' : ''}>B</button>
+                <li class="confirmados-assign-row">
+                  <span class="confirmados-assign-name">${escapeHtml(name)}</span>
+                  <div class="confirmados-team-switch" role="group" aria-label="Selecionar time de ${escapeAttr(name)}">
+                    <button class="confirmados-team-btn ${assignedTeam === 'A' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A">A</button>
+                    <button class="confirmados-team-btn ${assignedTeam === 'B' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B">B</button>
                   </div>
+                  <span class="partidas-team-badge">${teamLabel}</span>
                 </li>
               `;
             }).join('')}
@@ -192,15 +198,17 @@ function renderRecords(records) {
               <h4>Time A (${teamA.length})</h4>
               <ul class="confirmados-team-list">
                 ${teamA.map((name) => `
-                  <li>
-                    <div class="partidas-stat-group">
+                  <li class="confirmados-team-player-row">
+                    <div class="partidas-stat-group confirmados-stat-stack">
                       <button class="partidas-stat-btn danger" type="button" data-action="remove-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer assistencia">-</button>
                       <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                      <span class="confirmados-stat-count">${getAssistsForName(record, name)}</span>
                     </div>
-                    <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span>
-                    <div class="partidas-stat-group">
+                    <span class="confirmados-player-name">${escapeHtml(name)}</span>
+                    <div class="partidas-stat-group confirmados-stat-stack">
                       <button class="partidas-stat-btn danger" type="button" data-action="remove-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer gol">-</button>
                       <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+                      <span class="confirmados-stat-count">${getGoalsForName(record, name)}</span>
                     </div>
                   </li>
                 `).join('') || '<li><span>Sem atletas</span></li>'}
@@ -210,15 +218,17 @@ function renderRecords(records) {
               <h4>Time B (${teamB.length})</h4>
               <ul class="confirmados-team-list">
                 ${teamB.map((name) => `
-                  <li>
-                    <div class="partidas-stat-group">
+                  <li class="confirmados-team-player-row">
+                    <div class="partidas-stat-group confirmados-stat-stack">
                       <button class="partidas-stat-btn danger" type="button" data-action="remove-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer assistencia">-</button>
                       <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                      <span class="confirmados-stat-count">${getAssistsForName(record, name)}</span>
                     </div>
-                    <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span>
-                    <div class="partidas-stat-group">
+                    <span class="confirmados-player-name">${escapeHtml(name)}</span>
+                    <div class="partidas-stat-group confirmados-stat-stack">
                       <button class="partidas-stat-btn danger" type="button" data-action="remove-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer gol">-</button>
                       <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+                      <span class="confirmados-stat-count">${getGoalsForName(record, name)}</span>
                     </div>
                   </li>
                 `).join('') || '<li><span>Sem atletas</span></li>'}
