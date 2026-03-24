@@ -99,12 +99,10 @@ function renderTeamEvents(events) {
   return events
     .map((event) => {
       const icon = event.type === 'goal' ? '⚽' : '👟';
-      const label = event.type === 'goal' ? 'Gol' : 'Assistência';
       return `
       <li class="partidas-event-row partidas-event-${event.type}">
         <span class="partidas-event-icon" aria-hidden="true">${icon}</span>
         <span class="partidas-event-player">${escapeHtml(event.name)}</span>
-        <span class="partidas-event-type">${label}</span>
       </li>
     `;
     })
