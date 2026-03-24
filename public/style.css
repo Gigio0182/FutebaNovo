@@ -759,14 +759,14 @@ textarea {
 .confirmados-team-card {
   border: 1px solid #dce7e4;
   border-radius: 0.7rem;
-  padding: 0.55rem 0.65rem;
-  background: #f9fdfb;
+  padding: 0.65rem 0.7rem;
+  background: linear-gradient(180deg, #fcfffe 0%, #f3faf8 100%);
 }
 
 .confirmados-team-card h4 {
   margin: 0 0 0.35rem;
-  font-size: 0.95rem;
-  color: #1f4d49;
+  font-size: 1rem;
+  color: #133f3b;
 }
 
 .confirmados-team-list {
@@ -778,12 +778,44 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.2rem;
+  gap: 0.6rem;
+  margin-bottom: 0.32rem;
+  padding: 0.42rem 0.48rem;
+  border: 1px solid #deebe7;
+  border-radius: 0.58rem;
+  background: #fff;
 }
 
 .confirmados-team-list li span {
   overflow-wrap: anywhere;
+}
+
+.partidas-player-name {
+  font-weight: 700;
+  color: #163f3c;
+}
+
+.partidas-player-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.partidas-player-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: #edf7f3;
+  color: #0d4e48;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.partidas-stat-icon {
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .confirmados-move-btn {
@@ -848,9 +880,10 @@ textarea {
 }
 
 .partidas-subtitle {
-  margin: 0 0 0.45rem;
-  font-size: 0.96rem;
-  color: #204b47;
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: #356a64;
+  font-weight: 700;
 }
 
 .partidas-player-list {
@@ -894,20 +927,45 @@ textarea {
 }
 
 .partidas-scoreboard {
-  margin: 0.45rem 0 0.7rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: 0.7rem;
-  border: 1px solid #d5e7e2;
-  background: #f3faf8;
+  margin: 0.5rem 0 0.82rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.9rem;
+  border: 1px solid #b8d7cd;
+  background: linear-gradient(145deg, #f0faf7 0%, #e4f4ee 100%);
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.55rem;
   font-weight: 800;
   color: #184a46;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42), 0 8px 18px rgba(15, 118, 110, 0.14);
+}
+
+.partidas-score-team-label {
+  font-size: 0.84rem;
+  color: #2d635d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.partidas-score-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  height: 2.1rem;
+  padding: 0 0.35rem;
+  border-radius: 0.6rem;
+  background: #0f766e;
+  color: #fff;
+  font-size: 1.2rem;
+  line-height: 1;
+  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.28);
 }
 
 .partidas-score-sep {
   color: #0f766e;
+  font-size: 1rem;
+  font-weight: 900;
 }
 
 @media (max-width: 680px) {
@@ -979,6 +1037,11 @@ textarea {
   .partidas-player-list li {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .partidas-player-stats {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .confirmados-move-btn {

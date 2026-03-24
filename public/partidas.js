@@ -72,6 +72,49 @@ function getAssistsForName(record, name) {
   return Number(assistsByName[key] || 0);
 }
 
+function getContributors(record, names) {
+  return names
+    .map((name) => {
+      const goals = getGoalsForName(record, name);
+      const assists = getAssistsForName(record, name);
+      return { name, goals, assists, totalActions: goals + assists };
+    })
+    .filter((player) => player.totalActions > 0)
+    .sort((a, b) => {
+      if (b.totalActions !== a.totalActions) {
+        return b.totalActions - a.totalActions;
+      }
+      if (b.goals !== a.goals) {
+        return b.goals - a.goals;
+      }
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
+}
+
+function renderContributors(contributors) {
+  if (!contributors.length) {
+    return '<li><span>Nenhum gol ou assistência registrado.</span></li>';
+  }
+
+  return contributors
+    .map((player) => `
+      <li>
+        <span class="partidas-player-name">${escapeHtml(player.name)}</span>
+        <span class="partidas-player-stats">
+          <span class="partidas-player-stat" title="Gols">
+            <span class="partidas-stat-icon" aria-hidden="true">⚽</span>
+            <strong>${player.goals}</strong>
+          </span>
+          <span class="partidas-player-stat" title="Assistências">
+            <span class="partidas-stat-icon" aria-hidden="true">🅰</span>
+            <strong>${player.assists}</strong>
+          </span>
+        </span>
+      </li>
+    `)
+    .join('');
+}
+
 function renderRecords(records) {
   if (!records.length) {
     confirmadosListEl.innerHTML = '<p>Nenhuma partida encontrada.</p>';
@@ -84,31 +127,38 @@ function renderRecords(records) {
       const teamB = Array.isArray(record.teamB) ? record.teamB : [];
       const scoreA = Number(record.scoreA || 0);
       const scoreB = Number(record.scoreB || 0);
+      const contributorsA = getContributors(record, teamA);
+      const contributorsB = getContributors(record, teamB);
+      const confirmadosCount = Number(record.count || 0) || (teamA.length + teamB.length);
 
       return `
       <article class="confirmados-item">
         <div class="confirmados-item-head">
           <h3>${formatDate(record.date)}</h3>
-          <span class="confirmados-count">${record.count} confirmados</span>
+          <span class="confirmados-count">${confirmadosCount} confirmados</span>
         </div>
 
         <div class="partidas-scoreboard">
-          <span>Time A: <strong>${scoreA}</strong></span>
+          <span class="partidas-score-team-label">Time A</span>
+          <span class="partidas-score-value">${scoreA}</span>
           <span class="partidas-score-sep">x</span>
-          <span>Time B: <strong>${scoreB}</strong></span>
+          <span class="partidas-score-value">${scoreB}</span>
+          <span class="partidas-score-team-label">Time B</span>
         </div>
 
         <div class="confirmados-teams">
           <div class="confirmados-team-card">
             <h4>Time A (${teamA.length})</h4>
+            <p class="partidas-subtitle">Somente atletas com gol ou assistência</p>
             <ul class="confirmados-team-list">
-              ${teamA.map((name) => `<li><span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
+              ${renderContributors(contributorsA)}
             </ul>
           </div>
           <div class="confirmados-team-card">
             <h4>Time B (${teamB.length})</h4>
+            <p class="partidas-subtitle">Somente atletas com gol ou assistência</p>
             <ul class="confirmados-team-list">
-              ${teamB.map((name) => `<li><span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
+              ${renderContributors(contributorsB)}
             </ul>
           </div>
         </div>
