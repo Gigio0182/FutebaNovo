@@ -170,23 +170,6 @@ function renderExpandedDetails(record) {
 
   return `
     <div class="partidas-details">
-      <h4 class="partidas-subtitle">Atletas confirmados</h4>
-      <ul class="partidas-player-list">
-        ${(record.names || []).map((name) => {
-          const assignedTeam = getAssignedTeam(name, teams);
-          const teamLabel = assignedTeam ? `Time ${assignedTeam}` : 'Sem time';
-
-          return `
-            <li>
-              <span>${escapeHtml(name)}</span>
-              <div class="partidas-player-actions">
-                <span class="partidas-team-badge">${teamLabel}</span>
-              </div>
-            </li>
-          `;
-        }).join('')}
-      </ul>
-
       <div class="confirmados-teams">
         <div class="confirmados-team-card">
           <h4>Time A (${teams.teamA.length})</h4>

@@ -14,6 +14,7 @@ const TEAMS_STORAGE_KEY = GROUP_VALUE
 
 let recordsCache = [];
 const teamsByDate = new Map();
+let expandedRecordDate = null;
 
 function buildApiUrl(extraParams = {}) {
   const params = new URLSearchParams();
@@ -196,56 +197,53 @@ function renderRecords(records) {
     }
   });
 
+  if (expandedRecordDate && !validDates.has(expandedRecordDate)) {
+    expandedRecordDate = null;
+  }
+
   confirmadosListEl.innerHTML = records
     .map((record) => {
       const teams = getTeamsForRecord(record);
+      const isExpanded = expandedRecordDate === record.date;
 
       return `
       <article class="confirmados-item">
-        <div class="confirmados-item-head">
-          <h3>${formatDate(record.date)}</h3>
-          <div class="confirmados-head-right">
+        <button class="partidas-date-toggle" type="button" data-action="toggle-date" data-date="${record.date}">
+          <span>${formatDate(record.date)}</span>
+          <span class="partidas-date-meta">${record.count} confirmados</span>
+          <span class="partidas-date-chevron">${isExpanded ? 'Ocultar' : 'Ver'}</span>
+        </button>
+
+        ${isExpanded ? `
+        <div class="partidas-details">
+          <div class="confirmados-head-right" style="margin-bottom:0.55rem;">
             <span class="confirmados-count">${record.count} confirmados</span>
             <div class="confirmados-actions">
               <button class="confirmados-action-btn" type="button" data-action="edit-record" data-date="${record.date}">Editar</button>
               <button class="confirmados-action-btn danger" type="button" data-action="delete-record" data-date="${record.date}">Remover</button>
             </div>
           </div>
+          
+          <h4 class="partidas-subtitle">Selecionar time dos atletas</h4>
+          <ul class="partidas-player-list">
+            ${(record.names || []).map((name) => {
+              const assignedTeam = getAssignedTeam(name, teams);
+              const teamLabel = assignedTeam ? `Time ${assignedTeam}` : 'Sem time';
+
+              return `
+                <li>
+                  <span>${escapeHtml(name)}</span>
+                  <div class="partidas-player-actions">
+                    <span class="partidas-team-badge">${teamLabel}</span>
+                    <button class="confirmados-move-btn" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A" ${assignedTeam === 'A' ? 'disabled' : ''}>A</button>
+                    <button class="confirmados-move-btn" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B" ${assignedTeam === 'B' ? 'disabled' : ''}>B</button>
+                  </div>
+                </li>
+              `;
+            }).join('')}
+          </ul>
         </div>
-
-        <h4 class="partidas-subtitle">Selecionar time dos atletas</h4>
-        <ul class="partidas-player-list">
-          ${(record.names || []).map((name) => {
-            const assignedTeam = getAssignedTeam(name, teams);
-            const teamLabel = assignedTeam ? `Time ${assignedTeam}` : 'Sem time';
-
-            return `
-              <li>
-                <span>${escapeHtml(name)}</span>
-                <div class="partidas-player-actions">
-                  <span class="partidas-team-badge">${teamLabel}</span>
-                  <button class="confirmados-move-btn" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A" ${assignedTeam === 'A' ? 'disabled' : ''}>A</button>
-                  <button class="confirmados-move-btn" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B" ${assignedTeam === 'B' ? 'disabled' : ''}>B</button>
-                </div>
-              </li>
-            `;
-          }).join('')}
-        </ul>
-
-        <div class="confirmados-teams">
-          <div class="confirmados-team-card">
-            <h4>Time A (${teams.teamA.length})</h4>
-            <ul class="confirmados-team-list">
-              ${teams.teamA.map((name) => `<li><span>${escapeHtml(name)}</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
-            </ul>
-          </div>
-          <div class="confirmados-team-card">
-            <h4>Time B (${teams.teamB.length})</h4>
-            <ul class="confirmados-team-list">
-              ${teams.teamB.map((name) => `<li><span>${escapeHtml(name)}</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
-            </ul>
-          </div>
-        </div>
+        ` : ''}
       </article>
     `;
     })
@@ -362,6 +360,14 @@ confirmadosForm.addEventListener('submit', async (event) => {
 });
 
 confirmadosListEl.addEventListener('click', async (event) => {
+  const toggleBtn = event.target.closest('button[data-action="toggle-date"][data-date]');
+  if (toggleBtn) {
+    const date = toggleBtn.dataset.date;
+    expandedRecordDate = expandedRecordDate === date ? null : date;
+    renderRecords(recordsCache);
+    return;
+  }
+
   const assignBtn = event.target.closest('button[data-action="assign-player"][data-date][data-player][data-target]');
   if (assignBtn) {
     const date = assignBtn.dataset.date;
