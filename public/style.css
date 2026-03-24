@@ -999,13 +999,13 @@ textarea {
 }
 
 .partidas-events-list-right .partidas-event-row {
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .partidas-event-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 0.35rem;
   font-size: 0.92rem;
   font-weight: 700;
@@ -1034,7 +1034,7 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow-wrap: anywhere;
-  text-align: right;
+  text-align: left;
 }
 
 .partidas-event-empty {
