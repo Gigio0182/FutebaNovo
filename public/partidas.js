@@ -1,6 +1,19 @@
 const confirmadosListEl = document.getElementById('confirmados-list');
 const statusEl = document.getElementById('status');
+const cornerAuthBtn = document.getElementById('corner-auth-btn');
 const GROUP_VALUE = document.body.dataset.group || '';
+const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_futeba_token';
+
+function updateCornerAuthButton() {
+  if (!cornerAuthBtn) {
+    return;
+  }
+
+  const isLoggedIn = Boolean(localStorage.getItem(TOKEN_KEY));
+  cornerAuthBtn.textContent = isLoggedIn ? 'Cadastro' : 'Login';
+  cornerAuthBtn.title = isLoggedIn ? 'Ir para cadastro' : 'Acessar area de login';
+  cornerAuthBtn.setAttribute('aria-label', cornerAuthBtn.title);
+}
 
 function buildApiUrl(extraParams = {}) {
   const params = new URLSearchParams();
@@ -211,3 +224,6 @@ loadRecords().then(() => {
 }).catch((error) => {
   setStatus(error.message, true);
 });
+
+window.addEventListener('storage', updateCornerAuthButton);
+updateCornerAuthButton();
