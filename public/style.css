@@ -862,19 +862,28 @@ textarea {
 
 .confirmados-assign-list {
   margin-bottom: 0.7rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
 }
 
 .confirmados-assign-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.55rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border: 1px solid #dbe9e5;
+  border-radius: 0.62rem;
+  background: #fff;
 }
 
 .confirmados-assign-name {
   font-weight: 700;
   color: #184944;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .confirmados-team-switch {
@@ -885,6 +894,7 @@ textarea {
   border-radius: 999px;
   background: #e8f3ef;
   border: 1px solid #cfe3dc;
+  width: fit-content;
 }
 
 .confirmados-team-btn {
@@ -1281,8 +1291,23 @@ textarea {
   }
 
   .confirmados-assign-row {
-    grid-template-columns: 1fr;
+    padding: 0.38rem;
+    gap: 0.28rem;
+  }
+
+  .confirmados-assign-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.35rem;
+  }
+
+  .confirmados-team-btn {
+    min-width: 1.7rem;
+    padding: 0.2rem 0.48rem;
+    font-size: 0.8rem;
+  }
+
+  .confirmados-assign-name {
+    font-size: 0.86rem;
   }
 
   .confirmados-team-player-row {
