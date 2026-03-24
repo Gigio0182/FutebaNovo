@@ -72,47 +72,64 @@ function getAssistsForName(record, name) {
   return Number(assistsByName[key] || 0);
 }
 
-function getContributors(record, names) {
-  return names
-    .map((name) => {
-      const goals = getGoalsForName(record, name);
-      const assists = getAssistsForName(record, name);
-      return { name, goals, assists, totalActions: goals + assists };
-    })
-    .filter((player) => player.totalActions > 0)
-    .sort((a, b) => {
-      if (b.totalActions !== a.totalActions) {
-        return b.totalActions - a.totalActions;
-      }
-      if (b.goals !== a.goals) {
-        return b.goals - a.goals;
-      }
-      return a.name.localeCompare(b.name, 'pt-BR');
-    });
+function buildTeamEvents(record, names) {
+  const events = [];
+
+  names.forEach((name) => {
+    const goals = getGoalsForName(record, name);
+    const assists = getAssistsForName(record, name);
+
+    for (let i = 0; i < goals; i += 1) {
+      events.push({ type: 'goal', name });
+    }
+
+    for (let i = 0; i < assists; i += 1) {
+      events.push({ type: 'assist', name });
+    }
+  });
+
+  return events;
 }
 
-function renderContributors(contributors) {
-  if (!contributors.length) {
-    return '<li><span>Nenhum gol ou assistência registrado.</span></li>';
+function renderTeamEvents(events) {
+  if (!events.length) {
+    return '<li class="partidas-event-empty">Sem gols ou assistências.</li>';
   }
 
-  return contributors
-    .map((player) => `
-      <li>
-        <span class="partidas-player-name">${escapeHtml(player.name)}</span>
-        <span class="partidas-player-stats">
-          <span class="partidas-player-stat" title="Gols">
-            <span class="partidas-stat-icon" aria-hidden="true">⚽</span>
-            <strong>${player.goals}</strong>
-          </span>
-          <span class="partidas-player-stat" title="Assistências">
-            <span class="partidas-stat-icon" aria-hidden="true">🅰</span>
-            <strong>${player.assists}</strong>
-          </span>
-        </span>
+  return events
+    .map((event) => {
+      const icon = event.type === 'goal' ? '⚽' : '👟';
+      const label = event.type === 'goal' ? 'Gol' : 'Assistência';
+      return `
+      <li class="partidas-event-row partidas-event-${event.type}">
+        <span class="partidas-event-icon" aria-hidden="true">${icon}</span>
+        <span class="partidas-event-player">${escapeHtml(event.name)}</span>
+        <span class="partidas-event-type">${label}</span>
       </li>
-    `)
+    `;
+    })
     .join('');
+}
+
+function attachDateToggleHandlers() {
+  confirmadosListEl.querySelectorAll('[data-date-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const targetId = button.getAttribute('aria-controls');
+      const detailsEl = targetId ? document.getElementById(targetId) : null;
+      if (!detailsEl) {
+        return;
+      }
+
+      const isExpanded = button.getAttribute('aria-expanded') === 'true';
+      button.setAttribute('aria-expanded', String(!isExpanded));
+      detailsEl.hidden = isExpanded;
+
+      const chevron = button.querySelector('.partidas-date-chevron');
+      if (chevron) {
+        chevron.textContent = isExpanded ? 'Expandir' : 'Recolher';
+      }
+    });
+  });
 }
 
 function renderRecords(records) {
@@ -127,45 +144,46 @@ function renderRecords(records) {
       const teamB = Array.isArray(record.teamB) ? record.teamB : [];
       const scoreA = Number(record.scoreA || 0);
       const scoreB = Number(record.scoreB || 0);
-      const contributorsA = getContributors(record, teamA);
-      const contributorsB = getContributors(record, teamB);
+      const eventsA = buildTeamEvents(record, teamA);
+      const eventsB = buildTeamEvents(record, teamB);
       const confirmadosCount = Number(record.count || 0) || (teamA.length + teamB.length);
+      const detailsId = `partidas-details-${String(record.date || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
       return `
-      <article class="confirmados-item">
-        <div class="confirmados-item-head">
-          <h3>${formatDate(record.date)}</h3>
-          <span class="confirmados-count">${confirmadosCount} confirmados</span>
-        </div>
+      <article class="confirmados-item partidas-collapsible-item">
+        <button class="partidas-date-toggle" type="button" data-date-toggle aria-expanded="false" aria-controls="${detailsId}">
+          <span>${formatDate(record.date)}</span>
+          <span class="partidas-date-meta">${confirmadosCount} confirmados</span>
+          <span class="partidas-date-chevron">Expandir</span>
+        </button>
 
-        <div class="partidas-scoreboard">
-          <span class="partidas-score-team-label">Time A</span>
-          <span class="partidas-score-value">${scoreA}</span>
-          <span class="partidas-score-sep">x</span>
-          <span class="partidas-score-value">${scoreB}</span>
-          <span class="partidas-score-team-label">Time B</span>
-        </div>
+        <div id="${detailsId}" class="partidas-details" hidden>
+          <div class="partidas-scoreboard">
+            <div class="partidas-score-col">
+              <p class="partidas-score-team-label">Time A</p>
+              <p class="partidas-score-value">${scoreA}</p>
+              <ul class="partidas-events-list">
+                ${renderTeamEvents(eventsA)}
+              </ul>
+            </div>
 
-        <div class="confirmados-teams">
-          <div class="confirmados-team-card">
-            <h4>Time A (${teamA.length})</h4>
-            <p class="partidas-subtitle">Somente atletas com gol ou assistência</p>
-            <ul class="confirmados-team-list">
-              ${renderContributors(contributorsA)}
-            </ul>
-          </div>
-          <div class="confirmados-team-card">
-            <h4>Time B (${teamB.length})</h4>
-            <p class="partidas-subtitle">Somente atletas com gol ou assistência</p>
-            <ul class="confirmados-team-list">
-              ${renderContributors(contributorsB)}
-            </ul>
+            <span class="partidas-score-sep" aria-hidden="true">x</span>
+
+            <div class="partidas-score-col">
+              <p class="partidas-score-team-label">Time B</p>
+              <p class="partidas-score-value">${scoreB}</p>
+              <ul class="partidas-events-list partidas-events-list-right">
+                ${renderTeamEvents(eventsB)}
+              </ul>
+            </div>
           </div>
         </div>
       </article>
     `;
     })
     .join('');
+
+  attachDateToggleHandlers();
 }
 
 async function request(url, options = {}) {

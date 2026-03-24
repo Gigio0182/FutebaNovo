@@ -849,11 +849,11 @@ textarea {
 .partidas-date-toggle {
   width: 100%;
   margin-top: 0;
-  border: 1px solid #d5e4df;
-  border-radius: 0.7rem;
-  background: #f6fbf9;
+  border: 1px solid #c8dfd7;
+  border-radius: 0.8rem;
+  background: linear-gradient(160deg, #f7fcfa 0%, #eef8f4 100%);
   color: #18423f;
-  padding: 0.65rem 0.75rem;
+  padding: 0.72rem 0.8rem;
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
@@ -861,6 +861,12 @@ textarea {
   text-align: left;
   font-weight: 800;
   cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.partidas-date-toggle:hover {
+  border-color: #99c5b9;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.12);
 }
 
 .partidas-date-meta {
@@ -870,13 +876,16 @@ textarea {
 }
 
 .partidas-date-chevron {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 800;
   color: #0f766e;
+  background: #dff3ec;
+  border-radius: 999px;
+  padding: 0.16rem 0.5rem;
 }
 
 .partidas-details {
-  margin-top: 0.7rem;
+  margin-top: 0.72rem;
 }
 
 .partidas-subtitle {
@@ -927,45 +936,105 @@ textarea {
 }
 
 .partidas-scoreboard {
-  margin: 0.5rem 0 0.82rem;
-  padding: 0.55rem 0.8rem;
-  border-radius: 0.9rem;
-  border: 1px solid #b8d7cd;
-  background: linear-gradient(145deg, #f0faf7 0%, #e4f4ee 100%);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-weight: 800;
+  margin: 0;
+  padding: 0.8rem;
+  border-radius: 0.95rem;
+  border: 1px solid #b7d8ce;
+  background: linear-gradient(145deg, #f2fbf8 0%, #e3f2eb 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
   color: #184a46;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42), 0 8px 18px rgba(15, 118, 110, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), 0 10px 18px rgba(15, 118, 110, 0.12);
+}
+
+.partidas-score-col {
+  display: grid;
+  gap: 0.5rem;
 }
 
 .partidas-score-team-label {
-  font-size: 0.84rem;
+  margin: 0;
+  font-size: 0.82rem;
   color: #2d635d;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 800;
 }
 
 .partidas-score-value {
-  display: inline-flex;
+  margin: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.1rem;
-  height: 2.1rem;
-  padding: 0 0.35rem;
-  border-radius: 0.6rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.8rem;
   background: #0f766e;
   color: #fff;
-  font-size: 1.2rem;
+  font-size: 1.65rem;
+  font-weight: 900;
   line-height: 1;
   box-shadow: 0 6px 14px rgba(15, 118, 110, 0.28);
 }
 
 .partidas-score-sep {
+  align-self: center;
   color: #0f766e;
-  font-size: 1rem;
+  font-size: 1.5rem;
   font-weight: 900;
+}
+
+.partidas-events-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.34rem;
+}
+
+.partidas-events-list-right .partidas-event-row {
+  justify-content: flex-end;
+}
+
+.partidas-event-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #184944;
+}
+
+.partidas-event-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 1.05rem;
+  box-shadow: inset 0 0 0 1px #d4e7df;
+}
+
+.partidas-event-player {
+  overflow-wrap: anywhere;
+}
+
+.partidas-event-type {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #2f6660;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.partidas-event-empty {
+  font-size: 0.88rem;
+  color: #4a716c;
+  font-weight: 700;
 }
 
 @media (max-width: 680px) {
@@ -1032,6 +1101,32 @@ textarea {
   .partidas-date-toggle {
     grid-template-columns: 1fr;
     gap: 0.2rem;
+  }
+
+  .partidas-scoreboard {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  .partidas-score-sep {
+    display: none;
+  }
+
+  .partidas-score-col {
+    border: 1px solid #cfe5dd;
+    border-radius: 0.75rem;
+    padding: 0.55rem;
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .partidas-score-value {
+    width: 2.7rem;
+    height: 2.7rem;
+    font-size: 1.42rem;
+  }
+
+  .partidas-event-row {
+    font-size: 0.9rem;
   }
 
   .partidas-player-list li {
