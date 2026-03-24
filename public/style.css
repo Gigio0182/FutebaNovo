@@ -952,6 +952,7 @@ textarea {
 .partidas-score-col {
   display: grid;
   gap: 0.5rem;
+  justify-items: center;
 }
 
 .partidas-score-team-label {
@@ -980,10 +981,11 @@ textarea {
 }
 
 .partidas-score-sep {
-  align-self: center;
+  align-self: start;
   color: #0f766e;
   font-size: 1.5rem;
   font-weight: 900;
+  margin-top: 2.15rem;
 }
 
 .partidas-events-list {
@@ -992,10 +994,11 @@ textarea {
   padding: 0;
   display: grid;
   gap: 0.34rem;
+  justify-items: center;
 }
 
 .partidas-events-list-right .partidas-event-row {
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 .partidas-event-row {
@@ -1132,7 +1135,8 @@ textarea {
     align-items: center;
     justify-content: center;
     font-size: 1.1rem;
-    padding-top: 0.35rem;
+    margin-top: 1.6rem;
+    padding-top: 0;
   }
 
   .partidas-events-list {
