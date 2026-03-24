@@ -8,6 +8,7 @@ const TOKEN_KEY = document.body.dataset.group === 'domingo'
   ? 'app_futeba_domingo_token'
   : 'app_futeba_token';
 const GROUP_VALUE = document.body.dataset.group || '';
+const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
 
 let recordsCache = [];
 let expandedRecordDate = null;
@@ -47,6 +48,22 @@ function escapeAttr(value) {
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle('error', isError);
+}
+
+function notifyPartidasUpdate(date, action) {
+  try {
+    localStorage.setItem(
+      PARTIDAS_UPDATE_KEY,
+      JSON.stringify({
+        ts: Date.now(),
+        group: GROUP_VALUE || '',
+        date: String(date || ''),
+        action: String(action || '')
+      })
+    );
+  } catch {
+    // Silent fail: localStorage may be unavailable in private contexts.
+  }
 }
 
 function normalizeNames(text) {
@@ -385,6 +402,7 @@ confirmadosListEl.addEventListener('click', async (event) => {
       await updateTeam(date, player, target);
       expandedRecordDate = date;
       await loadRecords();
+      notifyPartidasUpdate(date, 'set-team');
       setStatus(`Time do atleta ${player} atualizado para ${target}.`);
     } catch (error) {
       setStatus(error.message, true);
@@ -404,6 +422,7 @@ confirmadosListEl.addEventListener('click', async (event) => {
       await registerGoal(date, player);
       expandedRecordDate = date;
       await loadRecords();
+      notifyPartidasUpdate(date, 'add-goal');
       setStatus(`Gol registrado para ${player}.`);
     } catch (error) {
       setStatus(error.message, true);
@@ -423,6 +442,7 @@ confirmadosListEl.addEventListener('click', async (event) => {
       await registerAssist(date, player);
       expandedRecordDate = date;
       await loadRecords();
+      notifyPartidasUpdate(date, 'add-assist');
       setStatus(`Assistencia registrada para ${player}.`);
     } catch (error) {
       setStatus(error.message, true);
@@ -442,6 +462,7 @@ confirmadosListEl.addEventListener('click', async (event) => {
       await undoGoal(date, player);
       expandedRecordDate = date;
       await loadRecords();
+      notifyPartidasUpdate(date, 'remove-goal');
       setStatus(`Gol desfeito para ${player}.`);
     } catch (error) {
       setStatus(error.message, true);
@@ -461,6 +482,7 @@ confirmadosListEl.addEventListener('click', async (event) => {
       await undoAssist(date, player);
       expandedRecordDate = date;
       await loadRecords();
+      notifyPartidasUpdate(date, 'remove-assist');
       setStatus(`Assistencia desfeita para ${player}.`);
     } catch (error) {
       setStatus(error.message, true);
@@ -495,6 +517,8 @@ confirmadosListEl.addEventListener('click', async (event) => {
     await request(buildApiUrl({ date }), {
       method: 'DELETE'
     });
+
+    notifyPartidasUpdate(date, 'delete-record');
 
     if (expandedRecordDate === date) {
       expandedRecordDate = null;

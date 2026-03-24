@@ -3,6 +3,9 @@ const statusEl = document.getElementById('status');
 const cornerAuthBtn = document.getElementById('corner-auth-btn');
 const GROUP_VALUE = document.body.dataset.group || '';
 const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_futeba_token';
+const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
+const AUTO_REFRESH_MS = 3000;
+let isLoadingRecords = false;
 
 function updateCornerAuthButton() {
   if (!cornerAuthBtn) {
@@ -215,8 +218,39 @@ async function request(url, options = {}) {
 }
 
 async function loadRecords() {
-  const data = await request(buildApiUrl());
-  renderRecords(data.records || []);
+  if (isLoadingRecords) {
+    return;
+  }
+
+  isLoadingRecords = true;
+  try {
+    const data = await request(buildApiUrl());
+    renderRecords(data.records || []);
+  } finally {
+    isLoadingRecords = false;
+  }
+}
+
+function handleAutoRefreshError(error) {
+  // Keep silent for background refreshes; surface only if it is the first load.
+  if (!confirmadosListEl.innerHTML.trim()) {
+    setStatus(error.message, true);
+  }
+}
+
+function isSameGroupUpdate(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return false;
+  }
+
+  const payloadGroup = String(payload.group || '');
+  return payloadGroup === GROUP_VALUE;
+}
+
+function startAutoRefresh() {
+  window.setInterval(() => {
+    loadRecords().catch(handleAutoRefreshError);
+  }, AUTO_REFRESH_MS);
 }
 
 loadRecords().then(() => {
@@ -225,5 +259,20 @@ loadRecords().then(() => {
   setStatus(error.message, true);
 });
 
-window.addEventListener('storage', updateCornerAuthButton);
+window.addEventListener('storage', (event) => {
+  if (event.key === PARTIDAS_UPDATE_KEY && event.newValue) {
+    try {
+      const payload = JSON.parse(event.newValue);
+      if (isSameGroupUpdate(payload)) {
+        loadRecords().catch(handleAutoRefreshError);
+      }
+    } catch {
+      // Ignore malformed payloads.
+    }
+  }
+
+  updateCornerAuthButton();
+});
+
+startAutoRefresh();
 updateCornerAuthButton();
