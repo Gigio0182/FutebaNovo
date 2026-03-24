@@ -193,9 +193,15 @@ function renderRecords(records) {
               <ul class="confirmados-team-list">
                 ${teamA.map((name) => `
                   <li>
-                    <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                    <div class="partidas-stat-group">
+                      <button class="partidas-stat-btn danger" type="button" data-action="remove-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer assistencia">-</button>
+                      <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                    </div>
                     <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span>
-                    <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+                    <div class="partidas-stat-group">
+                      <button class="partidas-stat-btn danger" type="button" data-action="remove-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer gol">-</button>
+                      <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+                    </div>
                   </li>
                 `).join('') || '<li><span>Sem atletas</span></li>'}
               </ul>
@@ -205,9 +211,15 @@ function renderRecords(records) {
               <ul class="confirmados-team-list">
                 ${teamB.map((name) => `
                   <li>
-                    <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                    <div class="partidas-stat-group">
+                      <button class="partidas-stat-btn danger" type="button" data-action="remove-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer assistencia">-</button>
+                      <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
+                    </div>
                     <span>${escapeHtml(name)} (${getGoalsForName(record, name)}⚽ ${getAssistsForName(record, name)}👟)</span>
-                    <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+                    <div class="partidas-stat-group">
+                      <button class="partidas-stat-btn danger" type="button" data-action="remove-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer gol">-</button>
+                      <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
+                    </div>
                   </li>
                 `).join('') || '<li><span>Sem atletas</span></li>'}
               </ul>
@@ -298,6 +310,28 @@ async function registerAssist(date, playerName) {
     method: 'PUT',
     body: JSON.stringify({
       action: 'add-assist',
+      date,
+      name: playerName
+    })
+  });
+}
+
+async function undoGoal(date, playerName) {
+  await request(buildApiUrl(), {
+    method: 'PUT',
+    body: JSON.stringify({
+      action: 'remove-goal',
+      date,
+      name: playerName
+    })
+  });
+}
+
+async function undoAssist(date, playerName) {
+  await request(buildApiUrl(), {
+    method: 'PUT',
+    body: JSON.stringify({
+      action: 'remove-assist',
       date,
       name: playerName
     })
@@ -396,6 +430,44 @@ confirmadosListEl.addEventListener('click', async (event) => {
       expandedRecordDate = date;
       await loadRecords();
       setStatus(`Assistencia registrada para ${player}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    return;
+  }
+
+  const undoGoalBtn = event.target.closest('button[data-action="remove-goal"][data-date][data-player]');
+  if (undoGoalBtn) {
+    const date = undoGoalBtn.dataset.date;
+    const player = String(undoGoalBtn.dataset.player || '').trim();
+    if (!date || !player) {
+      return;
+    }
+
+    try {
+      await undoGoal(date, player);
+      expandedRecordDate = date;
+      await loadRecords();
+      setStatus(`Gol desfeito para ${player}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    return;
+  }
+
+  const undoAssistBtn = event.target.closest('button[data-action="remove-assist"][data-date][data-player]');
+  if (undoAssistBtn) {
+    const date = undoAssistBtn.dataset.date;
+    const player = String(undoAssistBtn.dataset.player || '').trim();
+    if (!date || !player) {
+      return;
+    }
+
+    try {
+      await undoAssist(date, player);
+      expandedRecordDate = date;
+      await loadRecords();
+      setStatus(`Assistencia desfeita para ${player}.`);
     } catch (error) {
       setStatus(error.message, true);
     }

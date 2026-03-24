@@ -846,6 +846,16 @@ textarea {
   line-height: 1;
 }
 
+.partidas-stat-btn.danger {
+  background: #b91c1c;
+}
+
+.partidas-stat-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .partidas-date-toggle {
   width: 100%;
   margin-top: 0;

@@ -493,6 +493,54 @@ module.exports = async (req, res) => {
         return;
       }
 
+      if (action === 'remove-goal') {
+        const key = normalizeNameKey(canonicalName);
+        const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
+        const inTeamB = teamB.some((name) => normalizeNameKey(name) === key);
+
+        if (!inTeamA && !inTeamB) {
+          sendJson(res, 400, { error: 'Defina o time do atleta antes de desfazer gol.' });
+          return;
+        }
+
+        const currentGoals = Number(goalsByName[key] || 0);
+        if (currentGoals <= 0) {
+          sendJson(res, 400, { error: 'Nao ha gol registrado para desfazer.' });
+          return;
+        }
+
+        goalsByName[key] = currentGoals - 1;
+        if (inTeamA) {
+          scoreA = Math.max(0, scoreA - 1);
+        }
+        if (inTeamB) {
+          scoreB = Math.max(0, scoreB - 1);
+        }
+
+        await docRef.set(
+          {
+            goalsByName,
+            scoreA,
+            scoreB,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        await incrementAthleteMetric(db, req, canonicalName, 'goals', -1, now);
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: canonicalName,
+          goals: goalsByName[key],
+          scoreA,
+          scoreB,
+          goalsByName
+        });
+        return;
+      }
+
       if (action === 'add-assist') {
         const key = normalizeNameKey(canonicalName);
         const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
@@ -514,6 +562,44 @@ module.exports = async (req, res) => {
         );
 
         await incrementAthleteMetric(db, req, canonicalName, 'assists', 1, now);
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: canonicalName,
+          assists: assistsByName[key],
+          assistsByName
+        });
+        return;
+      }
+
+      if (action === 'remove-assist') {
+        const key = normalizeNameKey(canonicalName);
+        const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
+        const inTeamB = teamB.some((name) => normalizeNameKey(name) === key);
+
+        if (!inTeamA && !inTeamB) {
+          sendJson(res, 400, { error: 'Defina o time do atleta antes de desfazer assistencia.' });
+          return;
+        }
+
+        const currentAssists = Number(assistsByName[key] || 0);
+        if (currentAssists <= 0) {
+          sendJson(res, 400, { error: 'Nao ha assistencia registrada para desfazer.' });
+          return;
+        }
+
+        assistsByName[key] = currentAssists - 1;
+
+        await docRef.set(
+          {
+            assistsByName,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        await incrementAthleteMetric(db, req, canonicalName, 'assists', -1, now);
 
         sendJson(res, 200, {
           ok: true,
