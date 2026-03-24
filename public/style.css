@@ -994,21 +994,24 @@ textarea {
   padding: 0;
   display: grid;
   gap: 0.34rem;
-  justify-items: center;
+  justify-items: stretch;
+  width: 100%;
 }
 
 .partidas-events-list-right .partidas-event-row {
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .partidas-event-row {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.35rem;
   font-size: 0.92rem;
   font-weight: 700;
   color: #184944;
   min-width: 0;
+  width: 100%;
 }
 
 .partidas-event-icon {
@@ -1026,16 +1029,20 @@ textarea {
 .partidas-event-player {
   display: block;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .partidas-event-empty {
+  width: 100%;
   font-size: 0.88rem;
   color: #4a716c;
   font-weight: 700;
+  text-align: right;
 }
 
 @media (max-width: 680px) {
