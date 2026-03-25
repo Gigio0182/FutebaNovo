@@ -266,12 +266,6 @@ function renderRecords(records) {
         </button>
 
         <div id="${detailsId}" class="partidas-details" ${isExpanded ? '' : 'hidden'}>
-          <div class="partidas-share-row">
-            <button class="confirmados-action-btn partidas-share-btn" type="button" data-action="share-match" data-date="${dateValue}">
-              Compartilhar no WhatsApp
-            </button>
-          </div>
-
           <div class="partidas-scoreboard">
             <div class="partidas-score-col">
               <p class="partidas-score-team-label">Time A</p>
@@ -290,6 +284,12 @@ function renderRecords(records) {
                 ${renderTeamEvents(eventsB)}
               </ul>
             </div>
+          </div>
+
+          <div class="partidas-share-row">
+            <button class="confirmados-action-btn partidas-share-btn" type="button" data-action="share-match" data-date="${dateValue}">
+              Compartilhar
+            </button>
           </div>
         </div>
       </article>

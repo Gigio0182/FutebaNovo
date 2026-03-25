@@ -1058,12 +1058,13 @@ textarea {
 .partidas-share-row {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 0.45rem;
+  margin-top: 0.4rem;
 }
 
 .partidas-share-btn {
-  font-size: 0.8rem;
-  padding: 0.34rem 0.62rem;
+  font-size: 0.74rem;
+  padding: 0.28rem 0.56rem;
+  border-radius: 0.48rem;
 }
 
 .partidas-subtitle {
