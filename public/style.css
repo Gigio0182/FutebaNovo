@@ -1055,6 +1055,17 @@ textarea {
   margin-top: 0.72rem;
 }
 
+.partidas-share-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.45rem;
+}
+
+.partidas-share-btn {
+  font-size: 0.8rem;
+  padding: 0.34rem 0.62rem;
+}
+
 .partidas-subtitle {
   margin: 0 0 0.5rem;
   font-size: 0.82rem;

@@ -6,6 +6,7 @@ const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
 const AUTO_REFRESH_MS = 3000;
 let isLoadingRecords = false;
+let recordsCache = [];
 const expandedRecordDates = new Set();
 
 function updateCornerAuthButton() {
@@ -108,6 +109,80 @@ function buildTeamEvents(record, names) {
   return events;
 }
 
+function buildTeamShareLines(record, teamNames) {
+  const lines = [];
+
+  teamNames.forEach((name) => {
+    const goals = getGoalsForName(record, name);
+    const assists = getAssistsForName(record, name);
+
+    if (goals > 0) {
+      lines.push(`⚽ ${name}${goals > 1 ? ` x${goals}` : ''}`);
+    }
+
+    if (assists > 0) {
+      lines.push(`👟 ${name}${assists > 1 ? ` x${assists}` : ''}`);
+    }
+  });
+
+  return lines.length ? lines : ['Sem gols ou assistências'];
+}
+
+function buildShareText(record) {
+  const teamA = Array.isArray(record.teamA) ? record.teamA : [];
+  const teamB = Array.isArray(record.teamB) ? record.teamB : [];
+  const scoreA = Number(record.scoreA || 0);
+  const scoreB = Number(record.scoreB || 0);
+
+  const teamALines = buildTeamShareLines(record, teamA).join('\n');
+  const teamBLines = buildTeamShareLines(record, teamB).join('\n');
+
+  return [
+    `Partida Futeba - ${formatDate(record.date)}`,
+    `Placar: Time A ${scoreA} x ${scoreB} Time B`,
+    '',
+    'Time A',
+    teamALines,
+    '',
+    'Time B',
+    teamBLines
+  ].join('\n');
+}
+
+async function shareMatchRecord(record) {
+  const text = buildShareText(record);
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'Partida Futeba',
+        text
+      });
+      setStatus('Resumo da partida compartilhado.');
+      return;
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        return;
+      }
+    }
+  }
+
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  const popup = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  if (popup) {
+    setStatus('Abrindo compartilhamento no WhatsApp.');
+    return;
+  }
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    await navigator.clipboard.writeText(text);
+    setStatus('Nao foi possivel abrir o WhatsApp. Texto copiado para compartilhar manualmente.');
+    return;
+  }
+
+  setStatus('Nao foi possivel abrir o compartilhamento no momento.', true);
+}
+
 function renderTeamEvents(events) {
   if (!events.length) {
     return '<li class="partidas-event-empty">Sem gols ou assistências.</li>';
@@ -191,6 +266,12 @@ function renderRecords(records) {
         </button>
 
         <div id="${detailsId}" class="partidas-details" ${isExpanded ? '' : 'hidden'}>
+          <div class="partidas-share-row">
+            <button class="confirmados-action-btn partidas-share-btn" type="button" data-action="share-match" data-date="${dateValue}">
+              Compartilhar no WhatsApp
+            </button>
+          </div>
+
           <div class="partidas-scoreboard">
             <div class="partidas-score-col">
               <p class="partidas-score-team-label">Time A</p>
@@ -219,6 +300,30 @@ function renderRecords(records) {
   attachDateToggleHandlers();
 }
 
+confirmadosListEl.addEventListener('click', async (event) => {
+  const shareBtn = event.target.closest('button[data-action="share-match"][data-date]');
+  if (!shareBtn) {
+    return;
+  }
+
+  const date = String(shareBtn.dataset.date || '').trim();
+  if (!date) {
+    return;
+  }
+
+  const record = recordsCache.find((item) => String(item.date || '') === date);
+  if (!record) {
+    setStatus('Partida nao encontrada para compartilhar.', true);
+    return;
+  }
+
+  try {
+    await shareMatchRecord(record);
+  } catch (error) {
+    setStatus(error.message || 'Erro ao compartilhar partida.', true);
+  }
+});
+
 async function request(url, options = {}) {
   const response = await fetch(url, {
     headers: {
@@ -244,7 +349,8 @@ async function loadRecords() {
   isLoadingRecords = true;
   try {
     const data = await request(buildApiUrl());
-    renderRecords(data.records || []);
+    recordsCache = data.records || [];
+    renderRecords(recordsCache);
   } finally {
     isLoadingRecords = false;
   }
