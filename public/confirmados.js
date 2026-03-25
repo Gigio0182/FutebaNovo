@@ -120,7 +120,7 @@ async function executeQueuedAction(action) {
     await request(buildApiUrl(), {
       method: 'PUT',
       body: JSON.stringify({
-        action: 'set-team',
+        action: 'toggle-team',
         date: action.date,
         name: action.name,
         team: action.team
@@ -136,7 +136,8 @@ async function executeQueuedAction(action) {
       body: JSON.stringify({
         action: action.action,
         date: action.date,
-        name: action.name
+        name: action.name,
+        team: action.team
       })
     });
     notifyPartidasUpdate(action.date, action.action);
@@ -267,20 +268,52 @@ function getWorstForName(record, name) {
   return Number(worstByName[key] || 0) > 0;
 }
 
-function getAssignedTeam(record, name) {
+function hasTeam(record, name, teamKey) {
   const key = normalizeNameKey(name);
   const teamA = Array.isArray(record.teamA) ? record.teamA : [];
   const teamB = Array.isArray(record.teamB) ? record.teamB : [];
 
-  if (teamA.some((item) => normalizeNameKey(item) === key)) {
-    return 'A';
+  if (teamKey === 'A') {
+    return teamA.some((item) => normalizeNameKey(item) === key);
   }
 
-  if (teamB.some((item) => normalizeNameKey(item) === key)) {
-    return 'B';
+  if (teamKey === 'B') {
+    return teamB.some((item) => normalizeNameKey(item) === key);
   }
 
-  return '';
+  return false;
+}
+
+function getByTeamMap(record, mapName) {
+  const source = record && typeof record === 'object' ? record[mapName] : null;
+  const sourceA = source && typeof source.A === 'object' ? source.A : {};
+  const sourceB = source && typeof source.B === 'object' ? source.B : {};
+
+  return {
+    A: sourceA,
+    B: sourceB
+  };
+}
+
+function getTeamStatForName(record, name, teamKey, mapName) {
+  const key = normalizeNameKey(name);
+  const byTeam = getByTeamMap(record, mapName);
+  const explicit = Number(byTeam[teamKey][key] || 0);
+
+  if (explicit > 0) {
+    return explicit;
+  }
+
+  // Backward compatibility with records saved before team-scoped stats.
+  if (!Object.keys(byTeam.A).length && !Object.keys(byTeam.B).length && hasTeam(record, name, teamKey)) {
+    if (mapName === 'goalsByTeamName') {
+      return getGoalsForName(record, name);
+    }
+
+    return getAssistsForName(record, name);
+  }
+
+  return explicit;
 }
 
 function renderRecords(records) {
@@ -321,7 +354,8 @@ function renderRecords(records) {
           <h4 class="partidas-subtitle">Selecionar time dos atletas</h4>
           <ul class="partidas-player-list confirmados-assign-list">
             ${(record.names || []).map((name) => {
-              const assignedTeam = getAssignedTeam(record, name);
+              const onTeamA = hasTeam(record, name, 'A');
+              const onTeamB = hasTeam(record, name, 'B');
               const isMvp = getMvpForName(record, name);
               const isWorst = getWorstForName(record, name);
 
@@ -330,8 +364,8 @@ function renderRecords(records) {
                   <span class="confirmados-assign-name">${escapeHtml(name)}</span>
                   <div class="confirmados-assign-controls">
                     <div class="confirmados-team-switch" role="group" aria-label="Selecionar time de ${escapeAttr(name)}">
-                      <button class="confirmados-team-btn ${assignedTeam === 'A' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A">A</button>
-                      <button class="confirmados-team-btn ${assignedTeam === 'B' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B">B</button>
+                      <button class="confirmados-team-btn ${onTeamA ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A">A</button>
+                      <button class="confirmados-team-btn ${onTeamB ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B">B</button>
                     </div>
                     <div class="confirmados-award-switch" role="group" aria-label="MVP e pior em campo de ${escapeAttr(name)}">
                       <button class="confirmados-award-btn ${isMvp ? 'active' : ''}" type="button" data-action="toggle-mvp" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Marcar MVP">⭐</button>
@@ -350,15 +384,15 @@ function renderRecords(records) {
                 ${teamA.map((name) => `
                   <li class="confirmados-team-player-row">
                     <div class="partidas-stat-group confirmados-stat-stack">
-                      <button class="partidas-stat-btn danger" type="button" data-action="remove-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer assistencia">-</button>
-                      <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
-                      <span class="confirmados-stat-count">${getAssistsForName(record, name)}</span>
+                      <button class="partidas-stat-btn danger" type="button" data-action="remove-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" data-team="A" title="Desfazer assistencia">-</button>
+                      <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" data-team="A" title="Adicionar assistencia">&#128095;</button>
+                      <span class="confirmados-stat-count">${getTeamStatForName(record, name, 'A', 'assistsByTeamName')}</span>
                     </div>
                     <span class="confirmados-player-name">${escapeHtml(name)}</span>
                     <div class="partidas-stat-group confirmados-stat-stack">
-                      <button class="partidas-stat-btn danger" type="button" data-action="remove-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer gol">-</button>
-                      <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
-                      <span class="confirmados-stat-count">${getGoalsForName(record, name)}</span>
+                      <button class="partidas-stat-btn danger" type="button" data-action="remove-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" data-team="A" title="Desfazer gol">-</button>
+                      <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" data-team="A" title="Adicionar gol">&#9917;</button>
+                      <span class="confirmados-stat-count">${getTeamStatForName(record, name, 'A', 'goalsByTeamName')}</span>
                     </div>
                   </li>
                 `).join('') || '<li><span>Sem atletas</span></li>'}
@@ -370,15 +404,15 @@ function renderRecords(records) {
                 ${teamB.map((name) => `
                   <li class="confirmados-team-player-row">
                     <div class="partidas-stat-group confirmados-stat-stack">
-                      <button class="partidas-stat-btn danger" type="button" data-action="remove-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer assistencia">-</button>
-                      <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar assistencia">&#128095;</button>
-                      <span class="confirmados-stat-count">${getAssistsForName(record, name)}</span>
+                      <button class="partidas-stat-btn danger" type="button" data-action="remove-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" data-team="B" title="Desfazer assistencia">-</button>
+                      <button class="partidas-stat-btn" type="button" data-action="add-assist" data-date="${record.date}" data-player="${escapeAttr(name)}" data-team="B" title="Adicionar assistencia">&#128095;</button>
+                      <span class="confirmados-stat-count">${getTeamStatForName(record, name, 'B', 'assistsByTeamName')}</span>
                     </div>
                     <span class="confirmados-player-name">${escapeHtml(name)}</span>
                     <div class="partidas-stat-group confirmados-stat-stack">
-                      <button class="partidas-stat-btn danger" type="button" data-action="remove-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Desfazer gol">-</button>
-                      <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Adicionar gol">&#9917;</button>
-                      <span class="confirmados-stat-count">${getGoalsForName(record, name)}</span>
+                      <button class="partidas-stat-btn danger" type="button" data-action="remove-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" data-team="B" title="Desfazer gol">-</button>
+                      <button class="partidas-stat-btn" type="button" data-action="add-goal" data-date="${record.date}" data-player="${escapeAttr(name)}" data-team="B" title="Adicionar gol">&#9917;</button>
+                      <span class="confirmados-stat-count">${getTeamStatForName(record, name, 'B', 'goalsByTeamName')}</span>
                     </div>
                   </li>
                 `).join('') || '<li><span>Sem atletas</span></li>'}
@@ -448,7 +482,7 @@ async function updateTeam(date, playerName, team) {
   await request(buildApiUrl(), {
     method: 'PUT',
     body: JSON.stringify({
-      action: 'set-team',
+      action: 'toggle-team',
       date,
       name: playerName,
       team
@@ -456,46 +490,50 @@ async function updateTeam(date, playerName, team) {
   });
 }
 
-async function registerGoal(date, playerName) {
+async function registerGoal(date, playerName, team) {
   await request(buildApiUrl(), {
     method: 'PUT',
     body: JSON.stringify({
       action: 'add-goal',
       date,
-      name: playerName
+      name: playerName,
+      team
     })
   });
 }
 
-async function registerAssist(date, playerName) {
+async function registerAssist(date, playerName, team) {
   await request(buildApiUrl(), {
     method: 'PUT',
     body: JSON.stringify({
       action: 'add-assist',
       date,
-      name: playerName
+      name: playerName,
+      team
     })
   });
 }
 
-async function undoGoal(date, playerName) {
+async function undoGoal(date, playerName, team) {
   await request(buildApiUrl(), {
     method: 'PUT',
     body: JSON.stringify({
       action: 'remove-goal',
       date,
-      name: playerName
+      name: playerName,
+      team
     })
   });
 }
 
-async function undoAssist(date, playerName) {
+async function undoAssist(date, playerName, team) {
   await request(buildApiUrl(), {
     method: 'PUT',
     body: JSON.stringify({
       action: 'remove-assist',
       date,
-      name: playerName
+      name: playerName,
+      team
     })
   });
 }
@@ -601,18 +639,19 @@ confirmadosListEl.addEventListener('click', async (event) => {
   if (goalBtn) {
     const date = goalBtn.dataset.date;
     const player = String(goalBtn.dataset.player || '').trim();
-    if (!date || !player) {
+    const team = String(goalBtn.dataset.team || '').trim().toUpperCase();
+    if (!date || !player || (team !== 'A' && team !== 'B')) {
       return;
     }
 
     if (!navigator.onLine) {
-      enqueueAction({ type: 'player-action', action: 'add-goal', date, name: player });
+      enqueueAction({ type: 'player-action', action: 'add-goal', date, name: player, team });
       setStatus(`Gol para ${player} salvo offline.`);
       return;
     }
 
     try {
-      await registerGoal(date, player);
+      await registerGoal(date, player, team);
       expandedRecordDate = date;
       await loadRecords();
       notifyPartidasUpdate(date, 'add-goal');
@@ -627,18 +666,19 @@ confirmadosListEl.addEventListener('click', async (event) => {
   if (assistBtn) {
     const date = assistBtn.dataset.date;
     const player = String(assistBtn.dataset.player || '').trim();
-    if (!date || !player) {
+    const team = String(assistBtn.dataset.team || '').trim().toUpperCase();
+    if (!date || !player || (team !== 'A' && team !== 'B')) {
       return;
     }
 
     if (!navigator.onLine) {
-      enqueueAction({ type: 'player-action', action: 'add-assist', date, name: player });
+      enqueueAction({ type: 'player-action', action: 'add-assist', date, name: player, team });
       setStatus(`Assistencia para ${player} salva offline.`);
       return;
     }
 
     try {
-      await registerAssist(date, player);
+      await registerAssist(date, player, team);
       expandedRecordDate = date;
       await loadRecords();
       notifyPartidasUpdate(date, 'add-assist');
@@ -653,18 +693,19 @@ confirmadosListEl.addEventListener('click', async (event) => {
   if (undoGoalBtn) {
     const date = undoGoalBtn.dataset.date;
     const player = String(undoGoalBtn.dataset.player || '').trim();
-    if (!date || !player) {
+    const team = String(undoGoalBtn.dataset.team || '').trim().toUpperCase();
+    if (!date || !player || (team !== 'A' && team !== 'B')) {
       return;
     }
 
     if (!navigator.onLine) {
-      enqueueAction({ type: 'player-action', action: 'remove-goal', date, name: player });
+      enqueueAction({ type: 'player-action', action: 'remove-goal', date, name: player, team });
       setStatus(`Desfazer gol de ${player} salvo offline.`);
       return;
     }
 
     try {
-      await undoGoal(date, player);
+      await undoGoal(date, player, team);
       expandedRecordDate = date;
       await loadRecords();
       notifyPartidasUpdate(date, 'remove-goal');
@@ -679,18 +720,19 @@ confirmadosListEl.addEventListener('click', async (event) => {
   if (undoAssistBtn) {
     const date = undoAssistBtn.dataset.date;
     const player = String(undoAssistBtn.dataset.player || '').trim();
-    if (!date || !player) {
+    const team = String(undoAssistBtn.dataset.team || '').trim().toUpperCase();
+    if (!date || !player || (team !== 'A' && team !== 'B')) {
       return;
     }
 
     if (!navigator.onLine) {
-      enqueueAction({ type: 'player-action', action: 'remove-assist', date, name: player });
+      enqueueAction({ type: 'player-action', action: 'remove-assist', date, name: player, team });
       setStatus(`Desfazer assistencia de ${player} salvo offline.`);
       return;
     }
 
     try {
-      await undoAssist(date, player);
+      await undoAssist(date, player, team);
       expandedRecordDate = date;
       await loadRecords();
       notifyPartidasUpdate(date, 'remove-assist');

@@ -90,12 +90,60 @@ function getAssistsForName(record, name) {
   return Number(assistsByName[key] || 0);
 }
 
-function buildTeamEvents(record, names) {
+function hasTeam(record, name, teamKey) {
+  const key = normalizeNameKey(name);
+  const teamA = Array.isArray(record.teamA) ? record.teamA : [];
+  const teamB = Array.isArray(record.teamB) ? record.teamB : [];
+
+  if (teamKey === 'A') {
+    return teamA.some((item) => normalizeNameKey(item) === key);
+  }
+
+  if (teamKey === 'B') {
+    return teamB.some((item) => normalizeNameKey(item) === key);
+  }
+
+  return false;
+}
+
+function getByTeamMap(record, mapName) {
+  const source = record && typeof record === 'object' ? record[mapName] : null;
+  const sourceA = source && typeof source.A === 'object' ? source.A : {};
+  const sourceB = source && typeof source.B === 'object' ? source.B : {};
+
+  return {
+    A: sourceA,
+    B: sourceB
+  };
+}
+
+function getTeamStatForName(record, name, teamKey, mapName) {
+  const key = normalizeNameKey(name);
+  const byTeam = getByTeamMap(record, mapName);
+  const explicit = Number(byTeam[teamKey][key] || 0);
+
+  if (explicit > 0) {
+    return explicit;
+  }
+
+  // Backward compatibility with records saved before team-scoped stats.
+  if (!Object.keys(byTeam.A).length && !Object.keys(byTeam.B).length && hasTeam(record, name, teamKey)) {
+    if (mapName === 'goalsByTeamName') {
+      return getGoalsForName(record, name);
+    }
+
+    return getAssistsForName(record, name);
+  }
+
+  return explicit;
+}
+
+function buildTeamEvents(record, names, teamKey) {
   const events = [];
 
   names.forEach((name) => {
-    const goals = getGoalsForName(record, name);
-    const assists = getAssistsForName(record, name);
+    const goals = getTeamStatForName(record, name, teamKey, 'goalsByTeamName');
+    const assists = getTeamStatForName(record, name, teamKey, 'assistsByTeamName');
 
     for (let i = 0; i < goals; i += 1) {
       events.push({ type: 'goal', name });
@@ -109,12 +157,12 @@ function buildTeamEvents(record, names) {
   return events;
 }
 
-function buildTeamShareLines(record, teamNames) {
+function buildTeamShareLines(record, teamNames, teamKey) {
   const lines = [];
 
   teamNames.forEach((name) => {
-    const goals = getGoalsForName(record, name);
-    const assists = getAssistsForName(record, name);
+    const goals = getTeamStatForName(record, name, teamKey, 'goalsByTeamName');
+    const assists = getTeamStatForName(record, name, teamKey, 'assistsByTeamName');
 
     if (goals > 0) {
       lines.push(`⚽ ${name}${goals > 1 ? ` x${goals}` : ''}`);
@@ -134,8 +182,8 @@ function buildShareText(record) {
   const scoreA = Number(record.scoreA || 0);
   const scoreB = Number(record.scoreB || 0);
 
-  const teamALines = buildTeamShareLines(record, teamA).join('\n');
-  const teamBLines = buildTeamShareLines(record, teamB).join('\n');
+  const teamALines = buildTeamShareLines(record, teamA, 'A').join('\n');
+  const teamBLines = buildTeamShareLines(record, teamB, 'B').join('\n');
 
   return [
     `Partida Futeba - ${formatDate(record.date)}`,
@@ -250,8 +298,8 @@ function renderRecords(records) {
       const teamB = Array.isArray(record.teamB) ? record.teamB : [];
       const scoreA = Number(record.scoreA || 0);
       const scoreB = Number(record.scoreB || 0);
-      const eventsA = buildTeamEvents(record, teamA);
-      const eventsB = buildTeamEvents(record, teamB);
+      const eventsA = buildTeamEvents(record, teamA, 'A');
+      const eventsB = buildTeamEvents(record, teamB, 'B');
       const confirmadosCount = Number(record.count || 0) || (teamA.length + teamB.length);
       const dateValue = String(record.date || '');
       const detailsId = `partidas-details-${dateValue.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
