@@ -4,14 +4,20 @@ const confirmedNamesInput = document.getElementById('confirmed-names');
 const confirmadosListEl = document.getElementById('confirmados-list');
 const clearFormBtn = document.getElementById('clear-form-btn');
 const statusEl = document.getElementById('status');
-const TOKEN_KEY = document.body.dataset.group === 'domingo'
+const GROUP_VALUE = document.body.dataset.group || '';
+const TOKEN_KEY = GROUP_VALUE === 'domingo'
   ? 'app_futeba_domingo_token'
   : 'app_futeba_token';
-const GROUP_VALUE = document.body.dataset.group || '';
+const QUEUE_KEY = GROUP_VALUE === 'domingo'
+  ? 'app_futeba_domingo_confirmados_queue'
+  : 'app_futeba_confirmados_queue';
+const logoutBtn = document.getElementById('logout-btn');
+const syncStateEl = document.getElementById('sync-state');
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
 
 let recordsCache = [];
 let expandedRecordDate = null;
+let syncInProgress = false;
 
 function buildApiUrl(extraParams = {}) {
   const params = new URLSearchParams();
@@ -48,6 +54,126 @@ function escapeAttr(value) {
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle('error', isError);
+}
+
+function redirectToLogin() {
+  window.location.href = GROUP_VALUE === 'domingo' ? '/domingo' : '/';
+}
+
+function loadQueue() {
+  try {
+    return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveQueue(queue) {
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  updateSyncState();
+}
+
+function updateSyncState() {
+  if (!syncStateEl) {
+    return;
+  }
+
+  const pending = loadQueue().length;
+  if (!navigator.onLine) {
+    syncStateEl.textContent = pending ? `Offline | pendencias: ${pending}` : 'Offline';
+    return;
+  }
+
+  if (syncInProgress) {
+    syncStateEl.textContent = `Sincronizando${pending ? ` (${pending})` : '...'}`;
+    return;
+  }
+
+  syncStateEl.textContent = pending ? `Pendencias: ${pending}` : 'Sincronizado';
+}
+
+function enqueueAction(action) {
+  const queue = loadQueue();
+  queue.push({ ...action, queuedAt: Date.now() });
+  saveQueue(queue);
+}
+
+async function executeQueuedAction(action) {
+  if (action.type === 'save-list') {
+    await request(buildApiUrl(), {
+      method: 'POST',
+      body: JSON.stringify({ date: action.date, names: action.names })
+    });
+    notifyPartidasUpdate(action.date, 'save-list');
+    return;
+  }
+
+  if (action.type === 'delete-record') {
+    await request(buildApiUrl({ date: action.date }), {
+      method: 'DELETE'
+    });
+    notifyPartidasUpdate(action.date, 'delete-record');
+    return;
+  }
+
+  if (action.type === 'set-team') {
+    await request(buildApiUrl(), {
+      method: 'PUT',
+      body: JSON.stringify({
+        action: 'set-team',
+        date: action.date,
+        name: action.name,
+        team: action.team
+      })
+    });
+    notifyPartidasUpdate(action.date, 'set-team');
+    return;
+  }
+
+  if (action.type === 'player-action') {
+    await request(buildApiUrl(), {
+      method: 'PUT',
+      body: JSON.stringify({
+        action: action.action,
+        date: action.date,
+        name: action.name
+      })
+    });
+    notifyPartidasUpdate(action.date, action.action);
+  }
+}
+
+async function flushQueue() {
+  if (!navigator.onLine || syncInProgress) {
+    return;
+  }
+
+  const queue = loadQueue();
+  if (!queue.length) {
+    updateSyncState();
+    return;
+  }
+
+  syncInProgress = true;
+  updateSyncState();
+
+  const remaining = [...queue];
+
+  try {
+    while (remaining.length) {
+      await executeQueuedAction(remaining[0]);
+      remaining.shift();
+      saveQueue(remaining);
+    }
+
+    await loadRecords();
+    setStatus('Pendencias offline sincronizadas com sucesso.');
+  } catch (error) {
+    setStatus('Ainda existem pendencias offline para sincronizar.', true);
+  } finally {
+    syncInProgress = false;
+    updateSyncState();
+  }
 }
 
 function notifyPartidasUpdate(date, action) {
@@ -281,6 +407,8 @@ async function request(url, options = {}) {
 
   const data = await response.json();
   if (response.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    redirectToLogin();
     throw new Error('Sessao expirada. Faca login novamente.');
   }
 
@@ -411,11 +539,19 @@ confirmadosForm.addEventListener('submit', async (event) => {
       return;
     }
 
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'save-list', date, names });
+      resetForm();
+      setStatus('Lista salva offline. Sera sincronizada quando voltar conexao.');
+      return;
+    }
+
     await request(buildApiUrl(), {
       method: 'POST',
       body: JSON.stringify({ date, names })
     });
 
+    notifyPartidasUpdate(date, 'save-list');
     expandedRecordDate = date;
     resetForm();
     await loadRecords();
@@ -443,6 +579,12 @@ confirmadosListEl.addEventListener('click', async (event) => {
       return;
     }
 
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'set-team', date, name: player, team: target });
+      setStatus(`Ajuste de time para ${player} salvo offline.`);
+      return;
+    }
+
     try {
       await updateTeam(date, player, target);
       expandedRecordDate = date;
@@ -460,6 +602,12 @@ confirmadosListEl.addEventListener('click', async (event) => {
     const date = goalBtn.dataset.date;
     const player = String(goalBtn.dataset.player || '').trim();
     if (!date || !player) {
+      return;
+    }
+
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'player-action', action: 'add-goal', date, name: player });
+      setStatus(`Gol para ${player} salvo offline.`);
       return;
     }
 
@@ -483,6 +631,12 @@ confirmadosListEl.addEventListener('click', async (event) => {
       return;
     }
 
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'player-action', action: 'add-assist', date, name: player });
+      setStatus(`Assistencia para ${player} salva offline.`);
+      return;
+    }
+
     try {
       await registerAssist(date, player);
       expandedRecordDate = date;
@@ -500,6 +654,12 @@ confirmadosListEl.addEventListener('click', async (event) => {
     const date = undoGoalBtn.dataset.date;
     const player = String(undoGoalBtn.dataset.player || '').trim();
     if (!date || !player) {
+      return;
+    }
+
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'player-action', action: 'remove-goal', date, name: player });
+      setStatus(`Desfazer gol de ${player} salvo offline.`);
       return;
     }
 
@@ -523,6 +683,12 @@ confirmadosListEl.addEventListener('click', async (event) => {
       return;
     }
 
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'player-action', action: 'remove-assist', date, name: player });
+      setStatus(`Desfazer assistencia de ${player} salvo offline.`);
+      return;
+    }
+
     try {
       await undoAssist(date, player);
       expandedRecordDate = date;
@@ -543,6 +709,12 @@ confirmadosListEl.addEventListener('click', async (event) => {
       return;
     }
 
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'player-action', action: 'toggle-mvp', date, name: player });
+      setStatus(`Ajuste de MVP para ${player} salvo offline.`);
+      return;
+    }
+
     try {
       await toggleMvp(date, player);
       expandedRecordDate = date;
@@ -559,6 +731,12 @@ confirmadosListEl.addEventListener('click', async (event) => {
     const date = toggleWorstBtn.dataset.date;
     const player = String(toggleWorstBtn.dataset.player || '').trim();
     if (!date || !player) {
+      return;
+    }
+
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'player-action', action: 'toggle-worst', date, name: player });
+      setStatus(`Ajuste de pior em campo para ${player} salvo offline.`);
       return;
     }
 
@@ -596,6 +774,12 @@ confirmadosListEl.addEventListener('click', async (event) => {
     return;
   }
 
+  if (!navigator.onLine) {
+    enqueueAction({ type: 'delete-record', date });
+    setStatus(`Remocao de ${formatDate(date)} salva offline.`);
+    return;
+  }
+
   try {
     await request(buildApiUrl({ date }), {
       method: 'DELETE'
@@ -624,9 +808,32 @@ if (clearFormBtn) {
   });
 }
 
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+    } finally {
+      localStorage.removeItem(TOKEN_KEY);
+      redirectToLogin();
+    }
+  });
+}
+
+window.addEventListener('online', () => {
+  updateSyncState();
+  flushQueue();
+});
+
+window.addEventListener('offline', () => {
+  updateSyncState();
+});
+
 setDefaultDate();
 loadRecords().then(() => {
   setStatus('Listas carregadas.');
 }).catch((error) => {
   setStatus(error.message, true);
 });
+
+updateSyncState();
+flushQueue();

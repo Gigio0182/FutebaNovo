@@ -10,14 +10,14 @@
   </head>
   <body data-group="domingo" data-back-link="/domingo/athletes">
     <main class="container">
-      <header class="hero">
+      <header class="hero ranking-hero">
         <h1>Cadastro de Partidas - Domingo</h1>
         <p>Cole a lista da semana e acompanhe os confirmados por data da partida.</p>
         <div class="hero-actions">
           <a class="btn secondary" href="/domingo/partidas">Ver Partidas</a>
-          <a class="btn secondary" href="/domingo/ranking">Ver Ranking</a>
-          <a class="btn secondary" href="/domingo/confirmados">Abrir Confirmados</a>
+          <span id="sync-state" class="sync-pill"></span>
         </div>
+        <button id="logout-btn" class="corner-login-btn" type="button" title="Sair" aria-label="Sair">Sair</button>
       </header>
 
       <section class="card">
