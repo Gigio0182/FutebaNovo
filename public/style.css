@@ -917,6 +917,31 @@ textarea {
   flex-wrap: wrap;
 }
 
+.confirmados-award-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+
+.confirmados-award-field {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #21514c;
+  font-weight: 700;
+}
+
+.confirmados-award-field select {
+  margin: 0;
+  padding: 0.38rem 0.45rem;
+  border-radius: 0.5rem;
+  border: 1px solid #cde2db;
+  background: #fff;
+  color: #1d4743;
+  font-size: 0.84rem;
+}
+
 .confirmados-award-switch {
   display: inline-flex;
   align-items: center;
@@ -1004,6 +1029,12 @@ textarea {
   color: #14534f;
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .confirmados-award-panel {
+    grid-template-columns: 1fr;
+  }
 }
 
 .partidas-date-toggle {

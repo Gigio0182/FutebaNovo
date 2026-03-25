@@ -508,8 +508,9 @@ module.exports = async (req, res) => {
       const namesMap = mapNamesByKey(names);
       const nameKey = normalizeNameKey(rawName);
       const canonicalName = namesMap.get(nameKey);
+      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst']);
 
-      if (!canonicalName) {
+      if (!canonicalName && !actionsWithoutName.has(action)) {
         sendJson(res, 400, { error: 'Atleta nao encontrado na lista de confirmados da data.' });
         return;
       }
@@ -865,6 +866,47 @@ module.exports = async (req, res) => {
         return;
       }
 
+      if (action === 'set-mvp' || action === 'clear-mvp') {
+        const selectedKey = action === 'set-mvp' ? normalizeNameKey(canonicalName) : '';
+        const previousSelectedKeys = Object.entries(mvpByName)
+          .filter(([, value]) => Number(value || 0) > 0)
+          .map(([key]) => key);
+
+        Object.keys(mvpByName).forEach((key) => {
+          mvpByName[key] = 0;
+        });
+
+        if (selectedKey) {
+          mvpByName[selectedKey] = 1;
+        }
+
+        await docRef.set(
+          {
+            mvpByName,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        const previousSet = new Set(previousSelectedKeys);
+        for (const prevKey of previousSelectedKeys) {
+          if (prevKey !== selectedKey && namesMap.has(prevKey)) {
+            await incrementAthleteMetric(db, req, namesMap.get(prevKey), 'mvp', -1, now);
+          }
+        }
+        if (selectedKey && !previousSet.has(selectedKey) && namesMap.has(selectedKey)) {
+          await incrementAthleteMetric(db, req, namesMap.get(selectedKey), 'mvp', 1, now);
+        }
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: selectedKey ? namesMap.get(selectedKey) : '',
+          mvpByName
+        });
+        return;
+      }
+
       if (action === 'toggle-worst') {
         const key = normalizeNameKey(canonicalName);
         const currentWorst = Number(worstByName[key] || 0) > 0 ? 1 : 0;
@@ -889,6 +931,47 @@ module.exports = async (req, res) => {
           date,
           name: canonicalName,
           worst: nextWorst,
+          worstByName
+        });
+        return;
+      }
+
+      if (action === 'set-worst' || action === 'clear-worst') {
+        const selectedKey = action === 'set-worst' ? normalizeNameKey(canonicalName) : '';
+        const previousSelectedKeys = Object.entries(worstByName)
+          .filter(([, value]) => Number(value || 0) > 0)
+          .map(([key]) => key);
+
+        Object.keys(worstByName).forEach((key) => {
+          worstByName[key] = 0;
+        });
+
+        if (selectedKey) {
+          worstByName[selectedKey] = 1;
+        }
+
+        await docRef.set(
+          {
+            worstByName,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        const previousSet = new Set(previousSelectedKeys);
+        for (const prevKey of previousSelectedKeys) {
+          if (prevKey !== selectedKey && namesMap.has(prevKey)) {
+            await incrementAthleteMetric(db, req, namesMap.get(prevKey), 'worst', -1, now);
+          }
+        }
+        if (selectedKey && !previousSet.has(selectedKey) && namesMap.has(selectedKey)) {
+          await incrementAthleteMetric(db, req, namesMap.get(selectedKey), 'worst', 1, now);
+        }
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: selectedKey ? namesMap.get(selectedKey) : '',
           worstByName
         });
         return;
