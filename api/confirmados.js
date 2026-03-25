@@ -107,6 +107,23 @@ function normalizeAssistsByName(rawAssists, namesMap) {
   return normalized;
 }
 
+function normalizeMetricByName(rawMetric, namesMap) {
+  const source = rawMetric && typeof rawMetric === 'object' ? rawMetric : {};
+  const normalized = {};
+
+  Object.entries(source).forEach(([key, value]) => {
+    const normalizedKey = normalizeNameKey(key);
+    if (!normalizedKey || !namesMap.has(normalizedKey)) {
+      return;
+    }
+
+    const current = Number(value || 0);
+    normalized[normalizedKey] = current > 0 ? 1 : 0;
+  });
+
+  return normalized;
+}
+
 function calculateTeamScore(teamNames, goalsByName) {
   const team = Array.isArray(teamNames) ? teamNames : [];
   const goals = goalsByName && typeof goalsByName === 'object' ? goalsByName : {};
@@ -144,8 +161,8 @@ async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso
       goals: field === 'goals' ? Math.max(0, delta) : 0,
       assists: field === 'assists' ? Math.max(0, delta) : 0,
       games: 0,
-      mvp: 0,
-      worst: 0,
+      mvp: field === 'mvp' ? Math.max(0, delta) : 0,
+      worst: field === 'worst' ? Math.max(0, delta) : 0,
       createdAt: nowIso,
       updatedAt: nowIso
     });
@@ -281,6 +298,8 @@ module.exports = async (req, res) => {
         const teamB = normalizeTeams(data.teamB, namesMap);
         const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
         const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
+        const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
+        const worstByName = normalizeMetricByName(data.worstByName, namesMap);
         sendJson(res, 200, {
           records: [
             {
@@ -293,6 +312,8 @@ module.exports = async (req, res) => {
               scoreB: Number(data.scoreB || 0),
               goalsByName,
               assistsByName,
+              mvpByName,
+              worstByName,
               updatedAt: data.updatedAt || null
             }
           ]
@@ -309,6 +330,8 @@ module.exports = async (req, res) => {
         const teamB = normalizeTeams(data.teamB, namesMap);
         const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
         const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
+        const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
+        const worstByName = normalizeMetricByName(data.worstByName, namesMap);
         return {
           date: data.date || doc.id,
           names,
@@ -319,6 +342,8 @@ module.exports = async (req, res) => {
           scoreB: Number(data.scoreB || 0),
           goalsByName,
           assistsByName,
+          mvpByName,
+          worstByName,
           updatedAt: data.updatedAt || null
         };
       });
@@ -358,6 +383,8 @@ module.exports = async (req, res) => {
       const teamB = normalizeTeams(currentData.teamB, namesMap);
       const goalsByName = normalizeGoalsByName(currentData.goalsByName, namesMap);
       const assistsByName = normalizeAssistsByName(currentData.assistsByName, namesMap);
+      const mvpByName = normalizeMetricByName(currentData.mvpByName, namesMap);
+      const worstByName = normalizeMetricByName(currentData.worstByName, namesMap);
       const scoreA = calculateTeamScore(teamA, goalsByName);
       const scoreB = calculateTeamScore(teamB, goalsByName);
 
@@ -371,6 +398,8 @@ module.exports = async (req, res) => {
           teamB,
           goalsByName,
           assistsByName,
+          mvpByName,
+          worstByName,
           scoreA,
           scoreB,
           createdAt: current.exists ? current.data().createdAt || now : now,
@@ -422,6 +451,8 @@ module.exports = async (req, res) => {
       const teamB = normalizeTeams(data.teamB, namesMap);
       const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
       const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
+      const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
+      const worstByName = normalizeMetricByName(data.worstByName, namesMap);
       let scoreA = Number(data.scoreA || 0);
       let scoreB = Number(data.scoreB || 0);
 
@@ -624,6 +655,64 @@ module.exports = async (req, res) => {
           name: canonicalName,
           assists: assistsByName[key],
           assistsByName
+        });
+        return;
+      }
+
+      if (action === 'toggle-mvp') {
+        const key = normalizeNameKey(canonicalName);
+        const currentMvp = Number(mvpByName[key] || 0) > 0 ? 1 : 0;
+        const nextMvp = currentMvp ? 0 : 1;
+        const delta = nextMvp - currentMvp;
+        mvpByName[key] = nextMvp;
+
+        await docRef.set(
+          {
+            mvpByName,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        if (delta !== 0) {
+          await incrementAthleteMetric(db, req, canonicalName, 'mvp', delta, now);
+        }
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: canonicalName,
+          mvp: nextMvp,
+          mvpByName
+        });
+        return;
+      }
+
+      if (action === 'toggle-worst') {
+        const key = normalizeNameKey(canonicalName);
+        const currentWorst = Number(worstByName[key] || 0) > 0 ? 1 : 0;
+        const nextWorst = currentWorst ? 0 : 1;
+        const delta = nextWorst - currentWorst;
+        worstByName[key] = nextWorst;
+
+        await docRef.set(
+          {
+            worstByName,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        if (delta !== 0) {
+          await incrementAthleteMetric(db, req, canonicalName, 'worst', delta, now);
+        }
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: canonicalName,
+          worst: nextWorst,
+          worstByName
         });
         return;
       }

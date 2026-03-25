@@ -897,6 +897,40 @@ textarea {
   width: fit-content;
 }
 
+.confirmados-assign-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.confirmados-award-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.confirmados-award-btn {
+  width: auto;
+  min-width: 1.9rem;
+  margin-top: 0;
+  border: 1px solid #d4e5df;
+  border-radius: 999px;
+  padding: 0.24rem 0.45rem;
+  background: #fff;
+  color: #355b56;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.confirmados-award-btn.active {
+  border-color: #0f766e;
+  background: #e6f5f0;
+  color: #0f5f58;
+  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.2);
+}
+
 .confirmados-team-btn {
   width: auto;
   min-width: 2rem;

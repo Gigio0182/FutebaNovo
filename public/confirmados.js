@@ -125,6 +125,22 @@ function getAssistsForName(record, name) {
   return Number(assistsByName[key] || 0);
 }
 
+function getMvpForName(record, name) {
+  const key = normalizeNameKey(name);
+  const mvpByName = record.mvpByName && typeof record.mvpByName === 'object'
+    ? record.mvpByName
+    : {};
+  return Number(mvpByName[key] || 0) > 0;
+}
+
+function getWorstForName(record, name) {
+  const key = normalizeNameKey(name);
+  const worstByName = record.worstByName && typeof record.worstByName === 'object'
+    ? record.worstByName
+    : {};
+  return Number(worstByName[key] || 0) > 0;
+}
+
 function getAssignedTeam(record, name) {
   const key = normalizeNameKey(name);
   const teamA = Array.isArray(record.teamA) ? record.teamA : [];
@@ -180,13 +196,21 @@ function renderRecords(records) {
           <ul class="partidas-player-list confirmados-assign-list">
             ${(record.names || []).map((name) => {
               const assignedTeam = getAssignedTeam(record, name);
+              const isMvp = getMvpForName(record, name);
+              const isWorst = getWorstForName(record, name);
 
               return `
                 <li class="confirmados-assign-row">
                   <span class="confirmados-assign-name">${escapeHtml(name)}</span>
-                  <div class="confirmados-team-switch" role="group" aria-label="Selecionar time de ${escapeAttr(name)}">
-                    <button class="confirmados-team-btn ${assignedTeam === 'A' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A">A</button>
-                    <button class="confirmados-team-btn ${assignedTeam === 'B' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B">B</button>
+                  <div class="confirmados-assign-controls">
+                    <div class="confirmados-team-switch" role="group" aria-label="Selecionar time de ${escapeAttr(name)}">
+                      <button class="confirmados-team-btn ${assignedTeam === 'A' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="A">A</button>
+                      <button class="confirmados-team-btn ${assignedTeam === 'B' ? 'active' : ''}" type="button" data-action="assign-player" data-date="${record.date}" data-player="${escapeAttr(name)}" data-target="B">B</button>
+                    </div>
+                    <div class="confirmados-award-switch" role="group" aria-label="MVP e pior em campo de ${escapeAttr(name)}">
+                      <button class="confirmados-award-btn ${isMvp ? 'active' : ''}" type="button" data-action="toggle-mvp" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Marcar MVP">⭐</button>
+                      <button class="confirmados-award-btn ${isWorst ? 'active' : ''}" type="button" data-action="toggle-worst" data-date="${record.date}" data-player="${escapeAttr(name)}" title="Marcar pior em campo">👎</button>
+                    </div>
                   </div>
                 </li>
               `;
@@ -348,6 +372,28 @@ async function undoAssist(date, playerName) {
   });
 }
 
+async function toggleMvp(date, playerName) {
+  await request(buildApiUrl(), {
+    method: 'PUT',
+    body: JSON.stringify({
+      action: 'toggle-mvp',
+      date,
+      name: playerName
+    })
+  });
+}
+
+async function toggleWorst(date, playerName) {
+  await request(buildApiUrl(), {
+    method: 'PUT',
+    body: JSON.stringify({
+      action: 'toggle-worst',
+      date,
+      name: playerName
+    })
+  });
+}
+
 confirmadosForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
@@ -483,6 +529,44 @@ confirmadosListEl.addEventListener('click', async (event) => {
       await loadRecords();
       notifyPartidasUpdate(date, 'remove-assist');
       setStatus(`Assistencia desfeita para ${player}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    return;
+  }
+
+  const toggleMvpBtn = event.target.closest('button[data-action="toggle-mvp"][data-date][data-player]');
+  if (toggleMvpBtn) {
+    const date = toggleMvpBtn.dataset.date;
+    const player = String(toggleMvpBtn.dataset.player || '').trim();
+    if (!date || !player) {
+      return;
+    }
+
+    try {
+      await toggleMvp(date, player);
+      expandedRecordDate = date;
+      await loadRecords();
+      setStatus(`MVP atualizado para ${player}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+    return;
+  }
+
+  const toggleWorstBtn = event.target.closest('button[data-action="toggle-worst"][data-date][data-player]');
+  if (toggleWorstBtn) {
+    const date = toggleWorstBtn.dataset.date;
+    const player = String(toggleWorstBtn.dataset.player || '').trim();
+    if (!date || !player) {
+      return;
+    }
+
+    try {
+      await toggleWorst(date, player);
+      expandedRecordDate = date;
+      await loadRecords();
+      setStatus(`Pior em campo atualizado para ${player}.`);
     } catch (error) {
       setStatus(error.message, true);
     }
