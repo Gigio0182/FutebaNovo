@@ -303,7 +303,7 @@ function renderRecords(records) {
       return `
       <article class="confirmados-item">
         <button class="partidas-date-toggle" type="button" data-action="toggle-date" data-date="${record.date}">
-          <span>${formatDate(record.date)}</span>
+          <span class="partidas-date-title">${formatDate(record.date)}</span>
           <span class="partidas-date-meta">${record.count} confirmados</span>
           <span class="partidas-date-chevron">${isExpanded ? 'Ocultar' : 'Ver'}</span>
         </button>
