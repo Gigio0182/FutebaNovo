@@ -344,7 +344,6 @@ function renderRecords(records) {
         ${isExpanded ? `
         <div class="partidas-details">
           <div class="confirmados-head-right" style="margin-bottom:0.55rem;">
-            <span class="confirmados-count">${record.count} confirmados</span>
             <div class="confirmados-actions">
               <button class="confirmados-action-btn" type="button" data-action="edit-record" data-date="${record.date}">Editar</button>
               <button class="confirmados-action-btn danger" type="button" data-action="delete-record" data-date="${record.date}">Remover</button>
