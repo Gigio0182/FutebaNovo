@@ -343,9 +343,6 @@ function renderAthletes(athletes) {
           </div>
           <div class="athlete-details" style="display:${expanded ? 'block' : 'none'};margin-top:0.7rem;">
             <div class="metrics-grid">
-              ${metricCard(athlete, 'goals', 'Gols')}
-              ${metricCard(athlete, 'assists', 'Assistencias')}
-              ${metricCard(athlete, 'games', 'Jogos')}
               ${metricCard(athlete, 'mvp', 'MVP')}
               ${metricCard(athlete, 'worst', 'Pior em campo')}
             </div>

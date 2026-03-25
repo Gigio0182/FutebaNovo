@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>App Futeba Domingo | Partidas</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body data-group="domingo" data-back-link="/domingo/athletes">
+    <main class="container">
+      <header class="hero ranking-hero">
+        <h1>Partidas - Domingo</h1>
+        <p>Central da rodada com placar, destaque de gols e assistências por data.</p>
+        <div class="hero-actions">
+          <a class="btn secondary" href="/domingo/ranking">Ranking</a>
+          <a class="btn secondary" href="/domingo/goleadores">Goleadores</a>
+          <a class="btn secondary" href="/domingo/garcons">Garçons</a>
+          <a class="btn secondary" href="/domingo/participacoes">Participações</a>
+        </div>
+        <a id="corner-auth-btn" class="corner-login-btn" href="/domingo/athletes" title="Acessar área de login" aria-label="Acessar área de login">Login</a>
+      </header>
+
+      <section class="card">
+        <h2>Partidas por Data</h2>
+        <div id="confirmados-list" class="confirmados-list"></div>
+      </section>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script src="/partidas.js"></script>
+    <script src="/pwa.js"></script>
+  </body>
+</html>

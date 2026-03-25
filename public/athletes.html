@@ -10,40 +10,45 @@
   </head>
   <body>
     <main class="container">
-      <header class="hero">
-        <h1>Cadastro de Atletas</h1>
-        <p>Cadastre atletas e incremente gols, assistencias e jogos.</p>
+      <header class="hero ranking-hero">
+        <h1>Cadastro de Partidas</h1>
+        <p>Cole a lista da semana e acompanhe os confirmados por data da partida.</p>
         <div class="hero-actions">
-          <a class="btn secondary" href="/ranking">Ver Ranking</a>
-          <a class="btn secondary" href="/confirmados">Atletas Confirmados</a>
-          <button id="logout-btn" class="btn" type="button">Sair</button>
+          <a class="btn secondary" href="/partidas">Ver Partidas</a>
           <span id="sync-state" class="sync-pill"></span>
         </div>
+        <button id="logout-btn" class="corner-login-btn corner-logout-btn" type="button" title="Sair" aria-label="Sair">Sair</button>
       </header>
 
       <section class="card">
-        <h2>Novo atleta</h2>
-        <form id="athlete-form" class="grid-form">
-          <label>
-            Nome do atleta
-            <input id="athlete-name" required maxlength="60" />
+        <h2>Importar Lista da Semana</h2>
+        <form id="confirmados-form" class="grid-form">
+          <label class="confirmados-field confirmados-date-field">
+            Data da partida
+            <input id="match-date" type="date" required />
           </label>
-          <button class="btn" type="submit">Cadastrar</button>
+          <label class="confirmados-field">
+            Lista de nomes (1 por linha)
+            <textarea id="confirmed-names" rows="8" placeholder="Exemplo:
+1. Joao
+2. Carlos
+3. Matheus" required></textarea>
+          </label>
+          <p class="confirmados-hint">Linhas que contiverem "(avulso)" serao ignoradas automaticamente.</p>
+          <button class="btn" type="submit">Salvar Confirmados</button>
+          <button id="clear-form-btn" class="btn secondary" type="button">Limpar Formulario</button>
         </form>
       </section>
 
       <section class="card">
-        <h2>Atletas cadastrados</h2>
-        <div class="search-row">
-          <input id="athlete-search" type="search" placeholder="Buscar atleta por nome" style="max-width:220px;" />
-        </div>
-        <div id="athletes-list" class="athletes-list"></div>
+        <h2>Confirmados por Data</h2>
+        <div id="confirmados-list" class="confirmados-list"></div>
       </section>
 
       <p id="status" class="status" aria-live="polite"></p>
     </main>
 
-    <script src="/athletes.js"></script>
+    <script src="/confirmados.js"></script>
     <script src="/pwa.js"></script>
   </body>
 </html>
