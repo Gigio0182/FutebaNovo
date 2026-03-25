@@ -541,25 +541,28 @@ module.exports = async (req, res) => {
         const key = normalizeNameKey(canonicalName);
         const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
         const inTeamB = teamB.some((name) => normalizeNameKey(name) === key);
-        const filteredA = teamA.filter((name) => normalizeNameKey(name) !== key);
-        const filteredB = teamB.filter((name) => normalizeNameKey(name) !== key);
+        let nextTeamA = teamA;
+        let nextTeamB = teamB;
 
         if (action === 'set-team') {
+          nextTeamA = teamA.filter((name) => normalizeNameKey(name) !== key);
+          nextTeamB = teamB.filter((name) => normalizeNameKey(name) !== key);
+
           if (team === 'A') {
-            filteredA.push(canonicalName);
+            nextTeamA.push(canonicalName);
           }
 
           if (team === 'B') {
-            filteredB.push(canonicalName);
+            nextTeamB.push(canonicalName);
           }
-        } else {
-          if (team === 'A' && !inTeamA) {
-            filteredA.push(canonicalName);
-          }
-
-          if (team === 'B' && !inTeamB) {
-            filteredB.push(canonicalName);
-          }
+        } else if (team === 'A') {
+          nextTeamA = inTeamA
+            ? teamA.filter((name) => normalizeNameKey(name) !== key)
+            : [...teamA, canonicalName];
+        } else if (team === 'B') {
+          nextTeamB = inTeamB
+            ? teamB.filter((name) => normalizeNameKey(name) !== key)
+            : [...teamB, canonicalName];
         }
 
         scoreA = calculateTeamScore(goalsByTeamName, 'A');
@@ -567,8 +570,8 @@ module.exports = async (req, res) => {
 
         await docRef.set(
           {
-            teamA: filteredA,
-            teamB: filteredB,
+            teamA: nextTeamA,
+            teamB: nextTeamB,
             goalsByTeamName,
             assistsByTeamName,
             scoreA,
@@ -581,8 +584,8 @@ module.exports = async (req, res) => {
         sendJson(res, 200, {
           ok: true,
           date,
-          teamA: filteredA,
-          teamB: filteredB,
+          teamA: nextTeamA,
+          teamB: nextTeamB,
           scoreA,
           scoreB
         });
