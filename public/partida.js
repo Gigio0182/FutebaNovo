@@ -111,17 +111,8 @@ function buildSetupSummary(names) {
   return `${names.length} atletas selecionados`;
 }
 
-function getAvailableNamesForTeam(teamKey) {
-  const draft = getSetupDraft();
-  const allNames = Array.isArray(recordCache && recordCache.names) ? recordCache.names : [];
-  const selectedAKeys = new Set(draft.teamA.map((name) => normalizeNameKey(name)));
-  const selectedBKeys = new Set(draft.teamB.map((name) => normalizeNameKey(name)));
-
-  if (teamKey === 'A') {
-    return allNames.filter((name) => !selectedBKeys.has(normalizeNameKey(name)) || selectedAKeys.has(normalizeNameKey(name)));
-  }
-
-  return allNames.filter((name) => !selectedAKeys.has(normalizeNameKey(name)) || selectedBKeys.has(normalizeNameKey(name)));
+function getConfirmedNames() {
+  return Array.isArray(recordCache && recordCache.names) ? recordCache.names : [];
 }
 
 function buildRosterOptions(teamKey, names, selectedNames, disabled = false) {
@@ -193,6 +184,8 @@ function renderRosterPanel(teamKey, names) {
 }
 
 function refreshRosterPanels() {
+  const names = getConfirmedNames();
+
   ['A', 'B'].forEach((teamKey) => {
     const panel = rootEl.querySelector(`section[data-role="roster-panel"][data-team="${teamKey}"]`);
     if (!panel) {
@@ -204,8 +197,6 @@ function refreshRosterPanels() {
     const summaryEl = panel.querySelector('[data-role="roster-summary"]');
     const countEl = panel.querySelector('[data-role="roster-count"]');
     const listEl = panel.querySelector('[data-role="roster-list"]');
-    const names = getAvailableNamesForTeam(teamKey);
-
     if (summaryEl) {
       summaryEl.textContent = buildSetupSummary(selectedNames);
     }
@@ -252,10 +243,6 @@ function renderSetupForm(record) {
   const draft = getSetupDraft();
   const isLoggedIn = getIsLoggedIn();
   const allNames = Array.isArray(record.names) ? record.names : [];
-  const teamAKeys = new Set(draft.teamA.map((name) => normalizeNameKey(name)));
-  const teamBKeys = new Set(draft.teamB.map((name) => normalizeNameKey(name)));
-  const availableForA = allNames.filter((name) => !teamBKeys.has(normalizeNameKey(name)) || teamAKeys.has(normalizeNameKey(name)));
-  const availableForB = allNames.filter((name) => !teamAKeys.has(normalizeNameKey(name)) || teamBKeys.has(normalizeNameKey(name)));
   const submitLabel = record.matchStatus === 'started' ? 'Salvar configuracao' : 'Iniciar partida';
 
   return `
@@ -267,14 +254,14 @@ function renderSetupForm(record) {
             Nome do Time A
             <input id="team-name-a" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
           </label>
-          ${renderRosterPanel('A', availableForA)}
+          ${renderRosterPanel('A', allNames)}
         </div>
         <div class="partidas-setup-column">
           <label class="confirmados-field">
             Nome do Time B
             <input id="team-name-b" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
           </label>
-          ${renderRosterPanel('B', availableForB)}
+          ${renderRosterPanel('B', allNames)}
         </div>
       </div>
       <div class="partidas-setup-actions">
