@@ -1219,6 +1219,82 @@ textarea {
   align-items: start;
 }
 
+.partidas-setup-column {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.partidas-roster-panel {
+  border: 1px solid #d8e6e1;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 0.8rem;
+  min-width: 0;
+}
+
+.partidas-roster-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.partidas-roster-header h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  color: #184944;
+}
+
+.partidas-roster-summary {
+  margin: 0.18rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #52726d;
+}
+
+.partidas-roster-count {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: #e7f4f1;
+  color: #115e59;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.partidas-roster-list {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.partidas-roster-option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid #e2ece8;
+  border-radius: 0.65rem;
+  background: #fdfefe;
+  color: #1b4a45;
+  font-weight: 700;
+  min-height: 2.7rem;
+}
+
+.partidas-roster-option input {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
 .partidas-setup-picker {
   border: 1px solid #d8e6e1;
   border-radius: 0.75rem;
@@ -1558,17 +1634,17 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .partidas-roster-list {
+    max-height: 260px;
+  }
+
   .partidas-setup-panel {
     padding: 0.75rem;
   }
 
-  .partidas-setup-option {
+  .partidas-roster-option {
     min-height: 2.8rem;
     padding: 0.62rem 0.68rem;
-  }
-
-  .partidas-setup-options {
-    max-height: 220px;
   }
 
   .partidas-setup-actions {
