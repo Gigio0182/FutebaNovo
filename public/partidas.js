@@ -9,6 +9,7 @@ let isLoadingRecords = false;
 let recordsCache = [];
 const expandedRecordDates = new Set();
 const matchSetupDrafts = new Map();
+const setupPickerOpenKeys = new Set();
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -156,13 +157,37 @@ function buildSetupSummary(names) {
   return `${names.length} atletas selecionados`;
 }
 
+function getSetupPickerKey(date, teamKey) {
+  return `${String(date || '').trim()}:${teamKey}`;
+}
+
+function isSetupPickerOpen(date, teamKey) {
+  return setupPickerOpenKeys.has(getSetupPickerKey(date, teamKey));
+}
+
+function setSetupPickerOpen(date, teamKey, isOpen) {
+  const key = getSetupPickerKey(date, teamKey);
+  if (isOpen) {
+    setupPickerOpenKeys.add(key);
+    return;
+  }
+
+  setupPickerOpenKeys.delete(key);
+}
+
+function hasActiveSetupInteraction() {
+  const activeElement = document.activeElement;
+  return Boolean(activeElement && activeElement.closest('.partidas-setup-panel'));
+}
+
 function renderTeamChecklist(dateValue, teamKey, names, selectedNames, disabled = false) {
   const role = teamKey === 'A' ? 'team-a-player' : 'team-b-player';
   const title = teamKey === 'A' ? 'Atletas do Time A' : 'Atletas do Time B';
   const summary = buildSetupSummary(selectedNames);
+  const isOpen = isSetupPickerOpen(dateValue, teamKey);
 
   return `
-    <details class="partidas-setup-picker">
+    <details class="partidas-setup-picker" data-role="setup-picker" data-date="${dateValue}" data-team="${teamKey}" ${isOpen ? 'open' : ''}>
       <summary>${title} <span class="partidas-setup-summary">${escapeHtml(summary)}</span></summary>
       <div class="partidas-setup-options">
         ${names.map((name) => {
@@ -596,6 +621,41 @@ confirmadosListEl.addEventListener('change', (event) => {
   }
 });
 
+confirmadosListEl.addEventListener('input', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) {
+    return;
+  }
+
+  const date = String(target.dataset.date || '').trim();
+  if (!date) {
+    return;
+  }
+
+  const draft = matchSetupDrafts.get(date);
+  if (!draft) {
+    return;
+  }
+
+  if (target.matches('input[data-role="team-name-a"]')) {
+    draft.teamNameA = String(target.value || '').trim() || 'Time A';
+    return;
+  }
+
+  if (target.matches('input[data-role="team-name-b"]')) {
+    draft.teamNameB = String(target.value || '').trim() || 'Time B';
+  }
+});
+
+confirmadosListEl.addEventListener('toggle', (event) => {
+  const picker = event.target;
+  if (!(picker instanceof HTMLDetailsElement) || !picker.matches('details[data-role="setup-picker"][data-date][data-team]')) {
+    return;
+  }
+
+  setSetupPickerOpen(picker.dataset.date, picker.dataset.team, picker.open);
+});
+
 confirmadosListEl.addEventListener('submit', async (event) => {
   const form = event.target.closest('form[data-action="start-match-form"][data-date]');
   if (!form) {
@@ -633,8 +693,9 @@ confirmadosListEl.addEventListener('submit', async (event) => {
         teamB: draft.teamB
       })
     });
-    setupPanelOpenDates.delete(date);
     matchSetupDrafts.delete(date);
+    setSetupPickerOpen(date, 'A', false);
+    setSetupPickerOpen(date, 'B', false);
     expandedRecordDates.add(date);
     await loadRecords();
     notifyPartidasUpdate(date, 'start-match');
@@ -663,8 +724,14 @@ async function request(url, options = {}) {
   return data;
 }
 
-async function loadRecords() {
+async function loadRecords(options = {}) {
+  const { background = false } = options;
+
   if (isLoadingRecords) {
+    return;
+  }
+
+  if (background && hasActiveSetupInteraction()) {
     return;
   }
 
@@ -696,7 +763,7 @@ function isSameGroupUpdate(payload) {
 
 function startAutoRefresh() {
   window.setInterval(() => {
-    loadRecords().catch(handleAutoRefreshError);
+    loadRecords({ background: true }).catch(handleAutoRefreshError);
   }, AUTO_REFRESH_MS);
 }
 
@@ -711,7 +778,7 @@ window.addEventListener('storage', (event) => {
     try {
       const payload = JSON.parse(event.newValue);
       if (isSameGroupUpdate(payload)) {
-        loadRecords().catch(handleAutoRefreshError);
+        loadRecords({ background: true }).catch(handleAutoRefreshError);
       }
     } catch {
       // Ignore malformed payloads.
