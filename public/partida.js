@@ -130,6 +130,33 @@ function buildSetupSummary(names) {
   return `${names.length} atletas selecionados`;
 }
 
+function getAvailableNamesForTeam(teamKey) {
+  const draft = getSetupDraft();
+  const allNames = Array.isArray(recordCache && recordCache.names) ? recordCache.names : [];
+  const selectedAKeys = new Set(draft.teamA.map((name) => normalizeNameKey(name)));
+  const selectedBKeys = new Set(draft.teamB.map((name) => normalizeNameKey(name)));
+
+  if (teamKey === 'A') {
+    return allNames.filter((name) => !selectedBKeys.has(normalizeNameKey(name)) || selectedAKeys.has(normalizeNameKey(name)));
+  }
+
+  return allNames.filter((name) => !selectedAKeys.has(normalizeNameKey(name)) || selectedBKeys.has(normalizeNameKey(name)));
+}
+
+function buildTeamChecklistOptions(teamKey, names, selectedNames, disabled = false) {
+  const role = teamKey === 'A' ? 'team-a-player' : 'team-b-player';
+
+  return names.map((name) => {
+    const checked = selectedNames.some((item) => normalizeNameKey(item) === normalizeNameKey(name));
+    return `
+      <label class="partidas-setup-option">
+        <input type="checkbox" data-role="${role}" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} />
+        <span>${escapeHtml(name)}</span>
+      </label>
+    `;
+  }).join('') || '<p class="partidas-setup-empty">Nenhum atleta disponivel.</p>';
+}
+
 function createSetupDraft(record) {
   return {
     teamNameA: getTeamDisplayName(record.teamNameA, 'Time A'),
@@ -163,7 +190,6 @@ function syncTeamNameInputs() {
 }
 
 function renderTeamChecklist(teamKey, names, selectedNames, disabled = false) {
-  const role = teamKey === 'A' ? 'team-a-player' : 'team-b-player';
   const title = teamKey === 'A' ? 'Atletas do Time A' : 'Atletas do Time B';
   const summary = buildSetupSummary(selectedNames);
   const isOpen = isSetupPickerOpen(teamKey);
@@ -171,19 +197,48 @@ function renderTeamChecklist(teamKey, names, selectedNames, disabled = false) {
   return `
     <details class="partidas-setup-picker" data-role="setup-picker" data-team="${teamKey}" ${isOpen ? 'open' : ''}>
       <summary>${title} <span class="partidas-setup-summary">${escapeHtml(summary)}</span></summary>
-      <div class="partidas-setup-options">
-        ${names.map((name) => {
-          const checked = selectedNames.some((item) => normalizeNameKey(item) === normalizeNameKey(name));
-          return `
-            <label class="partidas-setup-option">
-              <input type="checkbox" data-role="${role}" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} />
-              <span>${escapeHtml(name)}</span>
-            </label>
-          `;
-        }).join('') || '<p class="partidas-setup-empty">Nenhum atleta disponivel.</p>'}
-      </div>
+      <div class="partidas-setup-options">${buildTeamChecklistOptions(teamKey, names, selectedNames, disabled)}</div>
     </details>
   `;
+}
+
+function refreshTeamPickerUI(teamKey) {
+  const draft = getSetupDraft();
+  const picker = rootEl.querySelector(`details[data-role="setup-picker"][data-team="${teamKey}"]`);
+  if (!picker) {
+    return;
+  }
+
+  const summaryEl = picker.querySelector('.partidas-setup-summary');
+  const optionsEl = picker.querySelector('.partidas-setup-options');
+  const selectedNames = teamKey === 'A' ? draft.teamA : draft.teamB;
+  const names = getAvailableNamesForTeam(teamKey);
+
+  if (summaryEl) {
+    summaryEl.textContent = buildSetupSummary(selectedNames);
+  }
+
+  if (optionsEl) {
+    optionsEl.innerHTML = buildTeamChecklistOptions(teamKey, names, selectedNames, !getIsLoggedIn());
+  }
+
+  picker.open = isSetupPickerOpen(teamKey);
+}
+
+function refreshSetupPickers() {
+  refreshTeamPickerUI('A');
+  refreshTeamPickerUI('B');
+}
+
+function closeAllSetupPickers() {
+  rootEl.querySelectorAll('details[data-role="setup-picker"][open]').forEach((picker) => {
+    if (!(picker instanceof HTMLDetailsElement)) {
+      return;
+    }
+
+    picker.open = false;
+    setSetupPickerOpen(picker.dataset.team, false);
+  });
 }
 
 function renderCurrentTeams(record) {
@@ -225,17 +280,17 @@ function renderSetupForm(record) {
   const submitLabel = record.matchStatus === 'started' ? 'Salvar configuracao' : 'Iniciar partida';
 
   return `
-    <form id="match-setup-form" class="partidas-setup-panel">
+    <form id="match-setup-form" class="partidas-setup-panel" autocomplete="off">
       <p class="partidas-setup-copy">Escolha os nomes dos times e selecione os atletas da partida.</p>
       <div class="partidas-setup-grid">
         <label class="confirmados-field">
           Nome do Time A
-          <input id="team-name-a" name="teamNameA" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required ${isLoggedIn ? '' : 'disabled'} />
+          <input id="team-name-a" name="teamNameA" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required autocomplete="new-password" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
         </label>
         ${renderTeamChecklist('A', availableForA, draft.teamA, !isLoggedIn)}
         <label class="confirmados-field">
           Nome do Time B
-          <input id="team-name-b" name="teamNameB" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required ${isLoggedIn ? '' : 'disabled'} />
+          <input id="team-name-b" name="teamNameB" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required autocomplete="new-password" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
         </label>
         ${renderTeamChecklist('B', availableForB, draft.teamB, !isLoggedIn)}
       </div>
@@ -346,7 +401,7 @@ rootEl.addEventListener('change', (event) => {
       ? [...setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key), name]
       : setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key);
     setupDraft.teamB = setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key);
-    renderPage();
+    refreshSetupPickers();
     return;
   }
 
@@ -357,7 +412,7 @@ rootEl.addEventListener('change', (event) => {
       ? [...setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key), name]
       : setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key);
     setupDraft.teamA = setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key);
-    renderPage();
+    refreshSetupPickers();
   }
 });
 
@@ -368,6 +423,19 @@ rootEl.addEventListener('toggle', (event) => {
   }
 
   setSetupPickerOpen(picker.dataset.team, picker.open);
+});
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  if (target.closest('.partidas-setup-picker')) {
+    return;
+  }
+
+  closeAllSetupPickers();
 });
 
 rootEl.addEventListener('submit', async (event) => {
