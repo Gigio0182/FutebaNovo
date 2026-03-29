@@ -8,7 +8,6 @@ const AUTO_REFRESH_MS = 3000;
 let isLoadingRecords = false;
 let recordsCache = [];
 const expandedRecordDates = new Set();
-const setupPanelOpenDates = new Set();
 const matchSetupDrafts = new Map();
 
 function getIsLoggedIn() {
@@ -157,7 +156,7 @@ function buildSetupSummary(names) {
   return `${names.length} atletas selecionados`;
 }
 
-function renderTeamChecklist(dateValue, teamKey, names, selectedNames) {
+function renderTeamChecklist(dateValue, teamKey, names, selectedNames, disabled = false) {
   const role = teamKey === 'A' ? 'team-a-player' : 'team-b-player';
   const title = teamKey === 'A' ? 'Atletas do Time A' : 'Atletas do Time B';
   const summary = buildSetupSummary(selectedNames);
@@ -170,7 +169,7 @@ function renderTeamChecklist(dateValue, teamKey, names, selectedNames) {
           const checked = selectedNames.some((item) => normalizeNameKey(item) === normalizeNameKey(name));
           return `
             <label class="partidas-setup-option">
-              <input type="checkbox" data-role="${role}" data-date="${dateValue}" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} />
+              <input type="checkbox" data-role="${role}" data-date="${dateValue}" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} />
               <span>${escapeHtml(name)}</span>
             </label>
           `;
@@ -187,23 +186,25 @@ function renderSetupPanel(record, dateValue) {
   const allNames = Array.isArray(record.names) ? record.names : [];
   const availableForA = allNames.filter((name) => !teamBKeys.has(normalizeNameKey(name)) || teamAKeys.has(normalizeNameKey(name)));
   const availableForB = allNames.filter((name) => !teamAKeys.has(normalizeNameKey(name)) || teamBKeys.has(normalizeNameKey(name)));
+  const isLoggedIn = getIsLoggedIn();
 
   return `
     <form class="partidas-setup-panel" data-action="start-match-form" data-date="${dateValue}">
+      <p class="partidas-setup-copy">A partida ainda nao foi iniciada. Defina nomes e atletas dos dois times para comecar.</p>
       <div class="partidas-setup-grid">
         <label class="confirmados-field">
           Nome do Time A
-          <input data-role="team-name-a" data-date="${dateValue}" name="teamNameA" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required />
+          <input data-role="team-name-a" data-date="${dateValue}" name="teamNameA" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required ${isLoggedIn ? '' : 'disabled'} />
         </label>
-        ${renderTeamChecklist(dateValue, 'A', availableForA, draft.teamA)}
+        ${renderTeamChecklist(dateValue, 'A', availableForA, draft.teamA, !isLoggedIn)}
         <label class="confirmados-field">
           Nome do Time B
-          <input data-role="team-name-b" data-date="${dateValue}" name="teamNameB" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required />
+          <input data-role="team-name-b" data-date="${dateValue}" name="teamNameB" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required ${isLoggedIn ? '' : 'disabled'} />
         </label>
-        ${renderTeamChecklist(dateValue, 'B', availableForB, draft.teamB)}
+        ${renderTeamChecklist(dateValue, 'B', availableForB, draft.teamB, !isLoggedIn)}
       </div>
       <div class="partidas-setup-actions">
-        <button class="btn" type="submit">Iniciar partida</button>
+        ${isLoggedIn ? '<button class="btn" type="submit">Iniciar partida</button>' : '<span class="partidas-status-helper">Faca login no cadastro para salvar a criacao da partida.</span>'}
       </div>
     </form>
   `;
@@ -446,7 +447,6 @@ function renderRecords(records) {
       const isExpanded = expandedRecordDates.has(dateValue);
       const statusLabel = getMatchStatusLabel(matchStatus);
       const isLoggedIn = getIsLoggedIn();
-      const isSetupOpen = setupPanelOpenDates.has(dateValue);
 
       return `
       <article class="confirmados-item partidas-collapsible-item">
@@ -478,15 +478,7 @@ function renderRecords(records) {
             </div>
           </div>
           ` : `
-          <div class="partidas-setup-callout">
-            <p class="partidas-setup-copy">A partida ainda nao foi iniciada. Defina nomes e atletas dos dois times para comecar.</p>
-            ${isLoggedIn ? `
-            <button class="confirmados-action-btn partidas-status-btn" type="button" data-action="toggle-setup-panel" data-date="${dateValue}">
-              ${isSetupOpen ? 'Ocultar configuracao' : 'Preparar partida'}
-            </button>
-            ` : '<span class="partidas-status-helper">Faca login no cadastro para iniciar a partida.</span>'}
-          </div>
-          ${isLoggedIn && isSetupOpen ? renderSetupPanel(record, escapeAttr(dateValue)) : ''}
+          ${renderSetupPanel(record, escapeAttr(dateValue))}
           `}
 
           <div class="partidas-share-row">
@@ -509,36 +501,6 @@ function renderRecords(records) {
 }
 
 confirmadosListEl.addEventListener('click', async (event) => {
-  const setupBtn = event.target.closest('button[data-action="toggle-setup-panel"][data-date]');
-  if (setupBtn) {
-    const date = String(setupBtn.dataset.date || '').trim();
-    if (!date) {
-      return;
-    }
-
-    if (!getIsLoggedIn()) {
-      setStatus('Faca login no cadastro para iniciar a partida.', true);
-      return;
-    }
-
-    const record = recordsCache.find((item) => String(item.date || '') === date);
-    if (!record) {
-      setStatus('Partida nao encontrada.', true);
-      return;
-    }
-
-    syncVisibleSetupDraft(date);
-    if (setupPanelOpenDates.has(date)) {
-      setupPanelOpenDates.delete(date);
-    } else {
-      getSetupDraft(record);
-      setupPanelOpenDates.add(date);
-    }
-
-    renderRecords(recordsCache);
-    return;
-  }
-
   const statusBtn = event.target.closest('button[data-action="toggle-match-status"][data-date]');
   if (statusBtn) {
     const date = String(statusBtn.dataset.date || '').trim();
@@ -560,7 +522,6 @@ confirmadosListEl.addEventListener('click', async (event) => {
         })
       });
       expandedRecordDates.add(date);
-      setupPanelOpenDates.delete(date);
       await loadRecords();
       notifyPartidasUpdate(date, 'toggle-match-status');
       const updatedRecord = recordsCache.find((item) => String(item.date || '') === date);
