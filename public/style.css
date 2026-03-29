@@ -1061,9 +1061,37 @@ textarea {
 }
 
 .partidas-date-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.35rem;
   font-size: 0.76rem;
   font-weight: 700;
   color: #52726d;
+}
+
+.partidas-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.55rem;
+  padding: 0.16rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.partidas-status-badge.is-started {
+  background: #dff7eb;
+  color: #0f6b44;
+}
+
+.partidas-status-badge.is-not-started {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .partidas-date-title {
@@ -1088,8 +1116,21 @@ textarea {
 
 .partidas-share-row {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
   margin-top: 0.4rem;
+}
+
+.partidas-status-btn.secondary {
+  background: #64748b;
+}
+
+.partidas-status-helper {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #52726d;
 }
 
 .partidas-share-btn {

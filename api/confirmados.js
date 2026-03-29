@@ -7,6 +7,11 @@ function isValidDate(dateText) {
   return /^\d{4}-\d{2}-\d{2}$/.test(dateText);
 }
 
+function normalizeMatchStatus(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'started' ? 'started' : 'not-started';
+}
+
 function normalizeNames(rawNames) {
   const lines = Array.isArray(rawNames) ? rawNames : [];
 
@@ -352,6 +357,7 @@ module.exports = async (req, res) => {
               date: dateRaw,
               names,
               count: names.length,
+              matchStatus: normalizeMatchStatus(data.matchStatus),
               teamA,
               teamB,
               scoreA: calculateTeamScore(goalsByTeamName, 'A'),
@@ -392,6 +398,7 @@ module.exports = async (req, res) => {
           date: data.date || doc.id,
           names,
           count: names.length,
+          matchStatus: normalizeMatchStatus(data.matchStatus),
           teamA,
           teamB,
           scoreA: calculateTeamScore(goalsByTeamName, 'A'),
@@ -451,6 +458,7 @@ module.exports = async (req, res) => {
       }
       const mvpByName = normalizeMetricByName(currentData.mvpByName, namesMap);
       const worstByName = normalizeMetricByName(currentData.worstByName, namesMap);
+      const matchStatus = normalizeMatchStatus(currentData.matchStatus);
       const scoreA = calculateTeamScore(goalsByTeamName, 'A');
       const scoreB = calculateTeamScore(goalsByTeamName, 'B');
 
@@ -468,6 +476,7 @@ module.exports = async (req, res) => {
           assistsByTeamName,
           mvpByName,
           worstByName,
+          matchStatus,
           scoreA,
           scoreB,
           createdAt: current.exists ? current.data().createdAt || now : now,
@@ -530,8 +539,32 @@ module.exports = async (req, res) => {
       }
       const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
       const worstByName = normalizeMetricByName(data.worstByName, namesMap);
+      let matchStatus = normalizeMatchStatus(data.matchStatus);
       let scoreA = calculateTeamScore(goalsByTeamName, 'A');
       let scoreB = calculateTeamScore(goalsByTeamName, 'B');
+
+      if (action === 'set-match-status' || action === 'toggle-match-status') {
+        const nextStatus = action === 'toggle-match-status'
+          ? (matchStatus === 'started' ? 'not-started' : 'started')
+          : normalizeMatchStatus(body.status);
+
+        matchStatus = nextStatus;
+
+        await docRef.set(
+          {
+            matchStatus,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          matchStatus
+        });
+        return;
+      }
 
       if (action === 'set-team' || action === 'toggle-team') {
         if (team !== 'A' && team !== 'B') {

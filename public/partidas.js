@@ -9,6 +9,10 @@ let isLoadingRecords = false;
 let recordsCache = [];
 const expandedRecordDates = new Set();
 
+function getIsLoggedIn() {
+  return Boolean(localStorage.getItem(TOKEN_KEY));
+}
+
 function updateCornerAuthButton() {
   if (!cornerAuthBtn) {
     return;
@@ -72,6 +76,14 @@ function formatDate(dateText) {
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle('error', isError);
+}
+
+function getMatchStatusLabel(status) {
+  return status === 'started' ? 'Iniciada' : 'Nao iniciada';
+}
+
+function getMatchStatusClassName(status) {
+  return status === 'started' ? 'is-started' : 'is-not-started';
 }
 
 function getGoalsForName(record, name) {
@@ -294,6 +306,7 @@ function renderRecords(records) {
 
   confirmadosListEl.innerHTML = records
     .map((record) => {
+      const matchStatus = String(record.matchStatus || 'not-started');
       const teamA = Array.isArray(record.teamA) ? record.teamA : [];
       const teamB = Array.isArray(record.teamB) ? record.teamB : [];
       const scoreA = Number(record.scoreA || 0);
@@ -304,12 +317,14 @@ function renderRecords(records) {
       const dateValue = String(record.date || '');
       const detailsId = `partidas-details-${dateValue.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
       const isExpanded = expandedRecordDates.has(dateValue);
+      const statusLabel = getMatchStatusLabel(matchStatus);
+      const isLoggedIn = getIsLoggedIn();
 
       return `
       <article class="confirmados-item partidas-collapsible-item">
         <button class="partidas-date-toggle" type="button" data-date-toggle data-date="${dateValue}" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-controls="${detailsId}">
           <span class="partidas-date-title">${formatDate(record.date)}</span>
-          <span class="partidas-date-meta">${confirmadosCount} confirmados</span>
+          <span class="partidas-date-meta">${confirmadosCount} confirmados <span class="partidas-status-badge ${getMatchStatusClassName(matchStatus)}">${statusLabel}</span></span>
           <span class="partidas-date-chevron">${isExpanded ? 'Recolher' : 'Expandir'}</span>
         </button>
 
@@ -335,6 +350,11 @@ function renderRecords(records) {
           </div>
 
           <div class="partidas-share-row">
+            ${isLoggedIn ? `
+            <button class="confirmados-action-btn partidas-status-btn ${matchStatus === 'started' ? 'secondary' : ''}" type="button" data-action="toggle-match-status" data-date="${dateValue}" data-status="${matchStatus}">
+              ${matchStatus === 'started' ? 'Marcar como nao iniciada' : 'Iniciar partida'}
+            </button>
+            ` : '<span class="partidas-status-helper">Faca login no cadastro para alterar o status.</span>'}
             <button class="confirmados-action-btn partidas-share-btn" type="button" data-action="share-match" data-date="${dateValue}">
               Compartilhar
             </button>
@@ -349,6 +369,41 @@ function renderRecords(records) {
 }
 
 confirmadosListEl.addEventListener('click', async (event) => {
+  const statusBtn = event.target.closest('button[data-action="toggle-match-status"][data-date]');
+  if (statusBtn) {
+    const date = String(statusBtn.dataset.date || '').trim();
+    if (!date) {
+      return;
+    }
+
+    if (!getIsLoggedIn()) {
+      setStatus('Faca login no cadastro para alterar o status da partida.', true);
+      return;
+    }
+
+    try {
+      await request(buildApiUrl(), {
+        method: 'PUT',
+        body: JSON.stringify({
+          action: 'toggle-match-status',
+          date
+        })
+      });
+      expandedRecordDates.add(date);
+      await loadRecords();
+      localStorage.setItem(
+        PARTIDAS_UPDATE_KEY,
+        JSON.stringify({ ts: Date.now(), group: GROUP_VALUE || '', date, action: 'toggle-match-status' })
+      );
+      const updatedRecord = recordsCache.find((item) => String(item.date || '') === date);
+      const updatedLabel = getMatchStatusLabel(updatedRecord && updatedRecord.matchStatus);
+      setStatus(`Status da partida atualizado para ${updatedLabel}.`);
+    } catch (error) {
+      setStatus(error.message || 'Erro ao atualizar status da partida.', true);
+    }
+    return;
+  }
+
   const shareBtn = event.target.closest('button[data-action="share-match"][data-date]');
   if (!shareBtn) {
     return;
@@ -373,9 +428,11 @@ confirmadosListEl.addEventListener('click', async (event) => {
 });
 
 async function request(url, options = {}) {
+  const token = localStorage.getItem(TOKEN_KEY) || '';
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     },
     ...options
