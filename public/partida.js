@@ -202,6 +202,21 @@ function renderTeamChecklist(teamKey, names, selectedNames, disabled = false) {
   `;
 }
 
+function updateSetupPickerSummary(teamKey) {
+  const picker = rootEl.querySelector(`details[data-role="setup-picker"][data-team="${teamKey}"]`);
+  if (!picker) {
+    return;
+  }
+
+  const summaryEl = picker.querySelector('.partidas-setup-summary');
+  const draft = getSetupDraft();
+  const selectedNames = teamKey === 'A' ? draft.teamA : draft.teamB;
+
+  if (summaryEl) {
+    summaryEl.textContent = buildSetupSummary(selectedNames);
+  }
+}
+
 function refreshTeamPickerUI(teamKey) {
   const draft = getSetupDraft();
   const picker = rootEl.querySelector(`details[data-role="setup-picker"][data-team="${teamKey}"]`);
@@ -285,12 +300,12 @@ function renderSetupForm(record) {
       <div class="partidas-setup-grid">
         <label class="confirmados-field">
           Nome do Time A
-          <input id="team-name-a" name="teamNameA" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required autocomplete="new-password" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
+          <input id="team-name-a" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
         </label>
         ${renderTeamChecklist('A', availableForA, draft.teamA, !isLoggedIn)}
         <label class="confirmados-field">
           Nome do Time B
-          <input id="team-name-b" name="teamNameB" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required autocomplete="new-password" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
+          <input id="team-name-b" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
         </label>
         ${renderTeamChecklist('B', availableForB, draft.teamB, !isLoggedIn)}
       </div>
@@ -401,7 +416,8 @@ rootEl.addEventListener('change', (event) => {
       ? [...setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key), name]
       : setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key);
     setupDraft.teamB = setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key);
-    refreshSetupPickers();
+    updateSetupPickerSummary('A');
+    updateSetupPickerSummary('B');
     return;
   }
 
@@ -412,7 +428,8 @@ rootEl.addEventListener('change', (event) => {
       ? [...setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key), name]
       : setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key);
     setupDraft.teamA = setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key);
-    refreshSetupPickers();
+    updateSetupPickerSummary('A');
+    updateSetupPickerSummary('B');
   }
 });
 
@@ -423,6 +440,9 @@ rootEl.addEventListener('toggle', (event) => {
   }
 
   setSetupPickerOpen(picker.dataset.team, picker.open);
+  if (!picker.open) {
+    refreshSetupPickers();
+  }
 });
 
 document.addEventListener('click', (event) => {
