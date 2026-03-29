@@ -676,6 +676,29 @@ textarea {
   background: #fff;
 }
 
+.partidas-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.partidas-list-main {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.partidas-list-main h3 {
+  margin: 0;
+}
+
+.partidas-list-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .confirmados-item-head {
   display: flex;
   align-items: center;
@@ -1114,6 +1137,43 @@ textarea {
   margin-top: 0.72rem;
 }
 
+.partida-summary-card h2 {
+  margin: 0;
+}
+
+.partida-summary-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.partida-summary-copy {
+  margin: 0.3rem 0 0;
+  color: #4d6f69;
+  font-weight: 700;
+}
+
+.partida-summary-side {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.partida-page-stack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.partida-page-stack h2 {
+  margin: 0;
+}
+
+.partida-current-teams {
+  margin-top: 0.15rem;
+}
+
 .partidas-setup-callout {
   display: flex;
   align-items: center;
@@ -1467,6 +1527,19 @@ textarea {
   .partidas-date-toggle {
     grid-template-columns: 1fr;
     gap: 0.2rem;
+  }
+
+  .partidas-list-row {
+    align-items: flex-start;
+  }
+
+  .partidas-list-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .partida-summary-grid {
+    align-items: flex-start;
   }
 
   .partidas-setup-grid {

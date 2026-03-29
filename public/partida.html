@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>App Futeba | Criacao da Partida</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body data-back-link="/partidas" data-auth-link="/athletes">
+    <main class="container">
+      <header class="hero ranking-hero">
+        <h1>Criacao da Partida</h1>
+        <p>Defina nomes dos times e selecione os atletas confirmados da data escolhida.</p>
+        <div class="hero-actions">
+          <a class="btn secondary" href="/partidas">Voltar para Partidas</a>
+        </div>
+        <a id="corner-auth-btn" class="corner-login-btn" href="/athletes" title="Acessar area de login" aria-label="Acessar area de login">Login</a>
+      </header>
+
+      <div id="match-setup-root"></div>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script src="/partida.js"></script>
+    <script src="/pwa.js"></script>
+  </body>
+</html>

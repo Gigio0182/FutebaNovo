@@ -17,6 +17,10 @@
       "dest": "/confirmados-domingo.html"
     },
     {
+      "src": "^/domingo/partida/?$",
+      "dest": "/partida-domingo.html"
+    },
+    {
       "src": "^/domingo/partidas/?$",
       "dest": "/partidas-domingo.html"
     },
@@ -47,6 +51,10 @@
     {
       "src": "^/confirmados/?$",
       "dest": "/confirmados.html"
+    },
+    {
+      "src": "^/partida/?$",
+      "dest": "/partida.html"
     },
     {
       "src": "^/partidas/?$",
