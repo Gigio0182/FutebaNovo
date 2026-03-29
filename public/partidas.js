@@ -8,6 +8,8 @@ const AUTO_REFRESH_MS = 3000;
 let isLoadingRecords = false;
 let recordsCache = [];
 const expandedRecordDates = new Set();
+const setupPanelOpenDates = new Set();
+const matchSetupDrafts = new Map();
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -49,6 +51,13 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeAttr(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
 function normalizeNameKey(value) {
   return String(value || '')
     .normalize('NFD')
@@ -84,6 +93,120 @@ function getMatchStatusLabel(status) {
 
 function getMatchStatusClassName(status) {
   return status === 'started' ? 'is-started' : 'is-not-started';
+}
+
+function getTeamDisplayName(value, fallback) {
+  return String(value || '').trim() || fallback;
+}
+
+function notifyPartidasUpdate(date, action) {
+  localStorage.setItem(
+    PARTIDAS_UPDATE_KEY,
+    JSON.stringify({ ts: Date.now(), group: GROUP_VALUE || '', date, action })
+  );
+}
+
+function createSetupDraft(record) {
+  return {
+    teamNameA: getTeamDisplayName(record.teamNameA, 'Time A'),
+    teamNameB: getTeamDisplayName(record.teamNameB, 'Time B'),
+    teamA: Array.isArray(record.teamA) ? [...record.teamA] : [],
+    teamB: Array.isArray(record.teamB) ? [...record.teamB] : []
+  };
+}
+
+function getSetupDraft(record) {
+  const date = String(record.date || '');
+  const existing = matchSetupDrafts.get(date);
+  if (existing) {
+    return existing;
+  }
+
+  const draft = createSetupDraft(record);
+  matchSetupDrafts.set(date, draft);
+  return draft;
+}
+
+function syncVisibleSetupDraft(date) {
+  const draft = matchSetupDrafts.get(date);
+  if (!draft) {
+    return;
+  }
+
+  const teamNameAInput = confirmadosListEl.querySelector(`input[data-role="team-name-a"][data-date="${CSS.escape(date)}"]`);
+  const teamNameBInput = confirmadosListEl.querySelector(`input[data-role="team-name-b"][data-date="${CSS.escape(date)}"]`);
+
+  if (teamNameAInput) {
+    draft.teamNameA = String(teamNameAInput.value || '').trim() || 'Time A';
+  }
+
+  if (teamNameBInput) {
+    draft.teamNameB = String(teamNameBInput.value || '').trim() || 'Time B';
+  }
+}
+
+function buildSetupSummary(names) {
+  if (!names.length) {
+    return 'Nenhum atleta selecionado';
+  }
+
+  if (names.length === 1) {
+    return names[0];
+  }
+
+  return `${names.length} atletas selecionados`;
+}
+
+function renderTeamChecklist(dateValue, teamKey, names, selectedNames) {
+  const role = teamKey === 'A' ? 'team-a-player' : 'team-b-player';
+  const title = teamKey === 'A' ? 'Atletas do Time A' : 'Atletas do Time B';
+  const summary = buildSetupSummary(selectedNames);
+
+  return `
+    <details class="partidas-setup-picker">
+      <summary>${title} <span class="partidas-setup-summary">${escapeHtml(summary)}</span></summary>
+      <div class="partidas-setup-options">
+        ${names.map((name) => {
+          const checked = selectedNames.some((item) => normalizeNameKey(item) === normalizeNameKey(name));
+          return `
+            <label class="partidas-setup-option">
+              <input type="checkbox" data-role="${role}" data-date="${dateValue}" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} />
+              <span>${escapeHtml(name)}</span>
+            </label>
+          `;
+        }).join('') || '<p class="partidas-setup-empty">Nenhum atleta disponivel.</p>'}
+      </div>
+    </details>
+  `;
+}
+
+function renderSetupPanel(record, dateValue) {
+  const draft = getSetupDraft(record);
+  const teamAKeys = new Set(draft.teamA.map((name) => normalizeNameKey(name)));
+  const teamBKeys = new Set(draft.teamB.map((name) => normalizeNameKey(name)));
+  const allNames = Array.isArray(record.names) ? record.names : [];
+  const availableForA = allNames.filter((name) => !teamBKeys.has(normalizeNameKey(name)) || teamAKeys.has(normalizeNameKey(name)));
+  const availableForB = allNames.filter((name) => !teamAKeys.has(normalizeNameKey(name)) || teamBKeys.has(normalizeNameKey(name)));
+
+  return `
+    <form class="partidas-setup-panel" data-action="start-match-form" data-date="${dateValue}">
+      <div class="partidas-setup-grid">
+        <label class="confirmados-field">
+          Nome do Time A
+          <input data-role="team-name-a" data-date="${dateValue}" name="teamNameA" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required />
+        </label>
+        ${renderTeamChecklist(dateValue, 'A', availableForA, draft.teamA)}
+        <label class="confirmados-field">
+          Nome do Time B
+          <input data-role="team-name-b" data-date="${dateValue}" name="teamNameB" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required />
+        </label>
+        ${renderTeamChecklist(dateValue, 'B', availableForB, draft.teamB)}
+      </div>
+      <div class="partidas-setup-actions">
+        <button class="btn" type="submit">Iniciar partida</button>
+      </div>
+    </form>
+  `;
 }
 
 function getGoalsForName(record, name) {
@@ -189,6 +312,8 @@ function buildTeamShareLines(record, teamNames, teamKey) {
 }
 
 function buildShareText(record) {
+  const teamNameA = getTeamDisplayName(record.teamNameA, 'Time A');
+  const teamNameB = getTeamDisplayName(record.teamNameB, 'Time B');
   const teamA = Array.isArray(record.teamA) ? record.teamA : [];
   const teamB = Array.isArray(record.teamB) ? record.teamB : [];
   const scoreA = Number(record.scoreA || 0);
@@ -199,12 +324,12 @@ function buildShareText(record) {
 
   return [
     `Partida Futeba - ${formatDate(record.date)}`,
-    `Placar: Time A ${scoreA} x ${scoreB} Time B`,
+    `Placar: ${teamNameA} ${scoreA} x ${scoreB} ${teamNameB}`,
     '',
-    'Time A',
+    teamNameA,
     teamALines,
     '',
-    'Time B',
+    teamNameB,
     teamBLines
   ].join('\n');
 }
@@ -307,6 +432,8 @@ function renderRecords(records) {
   confirmadosListEl.innerHTML = records
     .map((record) => {
       const matchStatus = String(record.matchStatus || 'not-started');
+      const teamNameA = getTeamDisplayName(record.teamNameA, 'Time A');
+      const teamNameB = getTeamDisplayName(record.teamNameB, 'Time B');
       const teamA = Array.isArray(record.teamA) ? record.teamA : [];
       const teamB = Array.isArray(record.teamB) ? record.teamB : [];
       const scoreA = Number(record.scoreA || 0);
@@ -319,6 +446,7 @@ function renderRecords(records) {
       const isExpanded = expandedRecordDates.has(dateValue);
       const statusLabel = getMatchStatusLabel(matchStatus);
       const isLoggedIn = getIsLoggedIn();
+      const isSetupOpen = setupPanelOpenDates.has(dateValue);
 
       return `
       <article class="confirmados-item partidas-collapsible-item">
@@ -329,9 +457,10 @@ function renderRecords(records) {
         </button>
 
         <div id="${detailsId}" class="partidas-details" ${isExpanded ? '' : 'hidden'}>
+          ${matchStatus === 'started' ? `
           <div class="partidas-scoreboard">
             <div class="partidas-score-col">
-              <p class="partidas-score-team-label">Time A</p>
+              <p class="partidas-score-team-label">${escapeHtml(teamNameA)}</p>
               <p class="partidas-score-value">${scoreA}</p>
               <ul class="partidas-events-list">
                 ${renderTeamEvents(eventsA)}
@@ -341,20 +470,31 @@ function renderRecords(records) {
             <span class="partidas-score-sep" aria-hidden="true">x</span>
 
             <div class="partidas-score-col">
-              <p class="partidas-score-team-label">Time B</p>
+              <p class="partidas-score-team-label">${escapeHtml(teamNameB)}</p>
               <p class="partidas-score-value">${scoreB}</p>
               <ul class="partidas-events-list partidas-events-list-right">
                 ${renderTeamEvents(eventsB)}
               </ul>
             </div>
           </div>
+          ` : `
+          <div class="partidas-setup-callout">
+            <p class="partidas-setup-copy">A partida ainda nao foi iniciada. Defina nomes e atletas dos dois times para comecar.</p>
+            ${isLoggedIn ? `
+            <button class="confirmados-action-btn partidas-status-btn" type="button" data-action="toggle-setup-panel" data-date="${dateValue}">
+              ${isSetupOpen ? 'Ocultar configuracao' : 'Preparar partida'}
+            </button>
+            ` : '<span class="partidas-status-helper">Faca login no cadastro para iniciar a partida.</span>'}
+          </div>
+          ${isLoggedIn && isSetupOpen ? renderSetupPanel(record, escapeAttr(dateValue)) : ''}
+          `}
 
           <div class="partidas-share-row">
-            ${isLoggedIn ? `
-            <button class="confirmados-action-btn partidas-status-btn ${matchStatus === 'started' ? 'secondary' : ''}" type="button" data-action="toggle-match-status" data-date="${dateValue}" data-status="${matchStatus}">
-              ${matchStatus === 'started' ? 'Marcar como nao iniciada' : 'Iniciar partida'}
+            ${matchStatus === 'started' && isLoggedIn ? `
+            <button class="confirmados-action-btn partidas-status-btn secondary" type="button" data-action="toggle-match-status" data-date="${dateValue}" data-status="${matchStatus}">
+              Marcar como nao iniciada
             </button>
-            ` : '<span class="partidas-status-helper">Faca login no cadastro para alterar o status.</span>'}
+            ` : '<span class="partidas-status-helper">Compartilhe o resumo da partida quando quiser.</span>'}
             <button class="confirmados-action-btn partidas-share-btn" type="button" data-action="share-match" data-date="${dateValue}">
               Compartilhar
             </button>
@@ -369,6 +509,36 @@ function renderRecords(records) {
 }
 
 confirmadosListEl.addEventListener('click', async (event) => {
+  const setupBtn = event.target.closest('button[data-action="toggle-setup-panel"][data-date]');
+  if (setupBtn) {
+    const date = String(setupBtn.dataset.date || '').trim();
+    if (!date) {
+      return;
+    }
+
+    if (!getIsLoggedIn()) {
+      setStatus('Faca login no cadastro para iniciar a partida.', true);
+      return;
+    }
+
+    const record = recordsCache.find((item) => String(item.date || '') === date);
+    if (!record) {
+      setStatus('Partida nao encontrada.', true);
+      return;
+    }
+
+    syncVisibleSetupDraft(date);
+    if (setupPanelOpenDates.has(date)) {
+      setupPanelOpenDates.delete(date);
+    } else {
+      getSetupDraft(record);
+      setupPanelOpenDates.add(date);
+    }
+
+    renderRecords(recordsCache);
+    return;
+  }
+
   const statusBtn = event.target.closest('button[data-action="toggle-match-status"][data-date]');
   if (statusBtn) {
     const date = String(statusBtn.dataset.date || '').trim();
@@ -390,11 +560,9 @@ confirmadosListEl.addEventListener('click', async (event) => {
         })
       });
       expandedRecordDates.add(date);
+      setupPanelOpenDates.delete(date);
       await loadRecords();
-      localStorage.setItem(
-        PARTIDAS_UPDATE_KEY,
-        JSON.stringify({ ts: Date.now(), group: GROUP_VALUE || '', date, action: 'toggle-match-status' })
-      );
+      notifyPartidasUpdate(date, 'toggle-match-status');
       const updatedRecord = recordsCache.find((item) => String(item.date || '') === date);
       const updatedLabel = getMatchStatusLabel(updatedRecord && updatedRecord.matchStatus);
       setStatus(`Status da partida atualizado para ${updatedLabel}.`);
@@ -424,6 +592,94 @@ confirmadosListEl.addEventListener('click', async (event) => {
     await shareMatchRecord(record);
   } catch (error) {
     setStatus(error.message || 'Erro ao compartilhar partida.', true);
+  }
+});
+
+confirmadosListEl.addEventListener('change', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) {
+    return;
+  }
+
+  const date = String(target.dataset.date || '').trim();
+  if (!date) {
+    return;
+  }
+
+  const draft = matchSetupDrafts.get(date);
+  if (!draft) {
+    return;
+  }
+
+  syncVisibleSetupDraft(date);
+
+  if (target.matches('input[data-role="team-a-player"]')) {
+    const name = String(target.value || '').trim();
+    const key = normalizeNameKey(name);
+    draft.teamA = target.checked
+      ? [...draft.teamA.filter((item) => normalizeNameKey(item) !== key), name]
+      : draft.teamA.filter((item) => normalizeNameKey(item) !== key);
+    draft.teamB = draft.teamB.filter((item) => normalizeNameKey(item) !== key);
+    renderRecords(recordsCache);
+    return;
+  }
+
+  if (target.matches('input[data-role="team-b-player"]')) {
+    const name = String(target.value || '').trim();
+    const key = normalizeNameKey(name);
+    draft.teamB = target.checked
+      ? [...draft.teamB.filter((item) => normalizeNameKey(item) !== key), name]
+      : draft.teamB.filter((item) => normalizeNameKey(item) !== key);
+    draft.teamA = draft.teamA.filter((item) => normalizeNameKey(item) !== key);
+    renderRecords(recordsCache);
+  }
+});
+
+confirmadosListEl.addEventListener('submit', async (event) => {
+  const form = event.target.closest('form[data-action="start-match-form"][data-date]');
+  if (!form) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const date = String(form.dataset.date || '').trim();
+  if (!date) {
+    return;
+  }
+
+  if (!getIsLoggedIn()) {
+    setStatus('Faca login no cadastro para iniciar a partida.', true);
+    return;
+  }
+
+  syncVisibleSetupDraft(date);
+  const draft = matchSetupDrafts.get(date);
+  if (!draft) {
+    setStatus('Configuracao da partida nao encontrada.', true);
+    return;
+  }
+
+  try {
+    await request(buildApiUrl(), {
+      method: 'PUT',
+      body: JSON.stringify({
+        action: 'start-match',
+        date,
+        teamNameA: draft.teamNameA,
+        teamNameB: draft.teamNameB,
+        teamA: draft.teamA,
+        teamB: draft.teamB
+      })
+    });
+    setupPanelOpenDates.delete(date);
+    matchSetupDrafts.delete(date);
+    expandedRecordDates.add(date);
+    await loadRecords();
+    notifyPartidasUpdate(date, 'start-match');
+    setStatus('Partida iniciada com sucesso.');
+  } catch (error) {
+    setStatus(error.message || 'Erro ao iniciar partida.', true);
   }
 });
 

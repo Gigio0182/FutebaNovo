@@ -12,6 +12,15 @@ function normalizeMatchStatus(value) {
   return normalized === 'started' ? 'started' : 'not-started';
 }
 
+function normalizeTeamName(value, fallback) {
+  const normalized = String(value || '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 40);
+
+  return normalized || fallback;
+}
+
 function normalizeNames(rawNames) {
   const lines = Array.isArray(rawNames) ? rawNames : [];
 
@@ -76,6 +85,14 @@ function normalizeTeams(rawTeam, namesMap) {
   });
 
   return normalized;
+}
+
+function normalizeRoster(rawRoster, namesMap) {
+  if (!Array.isArray(rawRoster)) {
+    return [];
+  }
+
+  return normalizeTeams(rawRoster, namesMap);
 }
 
 function normalizeGoalsByName(rawGoals, namesMap) {
@@ -358,6 +375,8 @@ module.exports = async (req, res) => {
               names,
               count: names.length,
               matchStatus: normalizeMatchStatus(data.matchStatus),
+              teamNameA: normalizeTeamName(data.teamNameA, 'Time A'),
+              teamNameB: normalizeTeamName(data.teamNameB, 'Time B'),
               teamA,
               teamB,
               scoreA: calculateTeamScore(goalsByTeamName, 'A'),
@@ -399,6 +418,8 @@ module.exports = async (req, res) => {
           names,
           count: names.length,
           matchStatus: normalizeMatchStatus(data.matchStatus),
+          teamNameA: normalizeTeamName(data.teamNameA, 'Time A'),
+          teamNameB: normalizeTeamName(data.teamNameB, 'Time B'),
           teamA,
           teamB,
           scoreA: calculateTeamScore(goalsByTeamName, 'A'),
@@ -444,6 +465,8 @@ module.exports = async (req, res) => {
         : [];
       const namesMap = mapNamesByKey(names);
       const currentData = current.exists ? current.data() || {} : {};
+      const teamNameA = normalizeTeamName(currentData.teamNameA, 'Time A');
+      const teamNameB = normalizeTeamName(currentData.teamNameB, 'Time B');
       const teamA = normalizeTeams(currentData.teamA, namesMap);
       const teamB = normalizeTeams(currentData.teamB, namesMap);
       const goalsByName = normalizeGoalsByName(currentData.goalsByName, namesMap);
@@ -468,6 +491,8 @@ module.exports = async (req, res) => {
         {
           date,
           names,
+          teamNameA,
+          teamNameB,
           teamA,
           teamB,
           goalsByName,
@@ -517,7 +542,7 @@ module.exports = async (req, res) => {
       const namesMap = mapNamesByKey(names);
       const nameKey = normalizeNameKey(rawName);
       const canonicalName = namesMap.get(nameKey);
-      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst']);
+      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'set-match-status', 'toggle-match-status', 'start-match']);
 
       if (!canonicalName && !actionsWithoutName.has(action)) {
         sendJson(res, 400, { error: 'Atleta nao encontrado na lista de confirmados da data.' });
@@ -525,6 +550,8 @@ module.exports = async (req, res) => {
       }
 
       const now = new Date().toISOString();
+      const teamNameA = normalizeTeamName(data.teamNameA, 'Time A');
+      const teamNameB = normalizeTeamName(data.teamNameB, 'Time B');
       const teamA = normalizeTeams(data.teamA, namesMap);
       const teamB = normalizeTeams(data.teamB, namesMap);
       const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
@@ -562,6 +589,55 @@ module.exports = async (req, res) => {
           ok: true,
           date,
           matchStatus
+        });
+        return;
+      }
+
+      if (action === 'start-match') {
+        const nextTeamNameA = normalizeTeamName(body.teamNameA, 'Time A');
+        const nextTeamNameB = normalizeTeamName(body.teamNameB, 'Time B');
+        const nextTeamA = normalizeRoster(body.teamA, namesMap);
+        const nextTeamB = normalizeRoster(body.teamB, namesMap);
+        const teamAKeys = new Set(nextTeamA.map((name) => normalizeNameKey(name)));
+        const hasOverlap = nextTeamB.some((name) => teamAKeys.has(normalizeNameKey(name)));
+
+        if (!nextTeamA.length) {
+          sendJson(res, 400, { error: 'Selecione pelo menos um atleta para o Time A.' });
+          return;
+        }
+
+        if (!nextTeamB.length) {
+          sendJson(res, 400, { error: 'Selecione pelo menos um atleta para o Time B.' });
+          return;
+        }
+
+        if (hasOverlap) {
+          sendJson(res, 400, { error: 'Um atleta nao pode estar nos dois times.' });
+          return;
+        }
+
+        matchStatus = 'started';
+
+        await docRef.set(
+          {
+            teamNameA: nextTeamNameA,
+            teamNameB: nextTeamNameB,
+            teamA: nextTeamA,
+            teamB: nextTeamB,
+            matchStatus,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          matchStatus,
+          teamNameA: nextTeamNameA,
+          teamNameB: nextTeamNameB,
+          teamA: nextTeamA,
+          teamB: nextTeamB
         });
         return;
       }

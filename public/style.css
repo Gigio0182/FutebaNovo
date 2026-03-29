@@ -1114,6 +1114,106 @@ textarea {
   margin-top: 0.72rem;
 }
 
+.partidas-setup-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid #d8e7e2;
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, #fbfdfc 0%, #f1f8f5 100%);
+}
+
+.partidas-setup-copy {
+  margin: 0;
+  max-width: 620px;
+  color: #295955;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.partidas-setup-panel {
+  margin-top: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid #d9e7e2;
+  border-radius: 0.85rem;
+  background: #fbfffd;
+}
+
+.partidas-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.partidas-setup-picker {
+  border: 1px solid #d8e6e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  overflow: hidden;
+}
+
+.partidas-setup-picker summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.78rem 0.85rem;
+  cursor: pointer;
+  font-weight: 800;
+  color: #184944;
+  list-style: none;
+}
+
+.partidas-setup-picker summary::-webkit-details-marker {
+  display: none;
+}
+
+.partidas-setup-summary {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #52726d;
+}
+
+.partidas-setup-options {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0 0.8rem 0.8rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.partidas-setup-option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid #e2ece8;
+  border-radius: 0.6rem;
+  background: #fdfefe;
+  color: #1b4a45;
+  font-weight: 700;
+}
+
+.partidas-setup-option input {
+  margin: 0;
+}
+
+.partidas-setup-empty {
+  margin: 0;
+  color: #54706c;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.partidas-setup-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.85rem;
+}
+
 .partidas-share-row {
   display: flex;
   align-items: center;
@@ -1367,6 +1467,14 @@ textarea {
   .partidas-date-toggle {
     grid-template-columns: 1fr;
     gap: 0.2rem;
+  }
+
+  .partidas-setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .partidas-setup-callout {
+    align-items: flex-start;
   }
 
   .partidas-date-title {
