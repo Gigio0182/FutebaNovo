@@ -11,6 +11,7 @@ let recordsCache = [];
 let goalDialog = null;
 let goalDialogState = null;
 let openFinishedMatchDetails = new Set();
+let serverClockOffsetMs = 0;
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -129,6 +130,19 @@ function formatMatchTimer(totalSeconds) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+function getServerAlignedNowMs() {
+  return Date.now() + serverClockOffsetMs;
+}
+
+function syncServerClock(serverNow) {
+  const serverNowMs = Date.parse(String(serverNow || ''));
+  if (Number.isNaN(serverNowMs)) {
+    return;
+  }
+
+  serverClockOffsetMs = serverNowMs - Date.now();
+}
+
 function getMatchTimerState(record) {
   const source = record && typeof record.matchTimer === 'object' ? record.matchTimer : {};
   const status = String(source.status || 'paused').trim().toLowerCase() === 'running' ? 'running' : 'paused';
@@ -153,7 +167,7 @@ function getMatchTimerElapsedSeconds(timerState) {
     return elapsedSeconds;
   }
 
-  return elapsedSeconds + Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+  return elapsedSeconds + Math.max(0, Math.floor((getServerAlignedNowMs() - startedAtMs) / 1000));
 }
 
 function getMatchTimerLabel(record) {
@@ -954,6 +968,7 @@ async function loadRecords() {
   isLoadingRecords = true;
   try {
     const data = await request(buildApiUrl());
+    syncServerClock(data.serverNow);
     recordsCache = data.records || [];
     renderRecords(recordsCache);
   } finally {

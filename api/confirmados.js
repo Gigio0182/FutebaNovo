@@ -509,6 +509,7 @@ module.exports = async (req, res) => {
 
     if (req.method === 'GET') {
       const dateRaw = String((req.query && req.query.date) || '').trim();
+      const serverNow = now;
 
       if (dateRaw) {
         if (!isValidDate(dateRaw)) {
@@ -518,7 +519,7 @@ module.exports = async (req, res) => {
 
         const doc = await confirmadosCollection.doc(dateRaw).get();
         if (!doc.exists) {
-          sendJson(res, 200, { records: [] });
+          sendJson(res, 200, { serverNow, records: [] });
           return;
         }
 
@@ -546,6 +547,7 @@ module.exports = async (req, res) => {
         const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
         const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
         sendJson(res, 200, {
+          serverNow,
           records: [
             {
               date: dateRaw,
@@ -621,7 +623,7 @@ module.exports = async (req, res) => {
         };
       });
 
-      sendJson(res, 200, { records });
+      sendJson(res, 200, { serverNow, records });
       return;
     }
 
