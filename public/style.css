@@ -1972,22 +1972,24 @@ textarea {
 
   .partidas-current-teams .confirmados-team-list li {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-    gap: 0.12rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: stretch;
+    gap: 0.35rem;
     padding: 0.3rem 0.24rem;
-    text-align: center;
+    text-align: left;
   }
 
   .partidas-current-teams .partidas-player-name {
     width: 100%;
-    text-align: center;
+    text-align: left;
     overflow-wrap: anywhere;
     line-height: 1.15;
   }
 
   .partidas-current-teams .partidas-goal-btn {
-    justify-self: center;
+    justify-self: end;
+    align-self: center;
     min-width: 3.15rem;
     padding: 0.3rem 0.45rem;
     font-size: 0.8rem;
