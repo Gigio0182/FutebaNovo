@@ -99,6 +99,10 @@ function getTeamDisplayName(value, fallback) {
   return String(value || '').trim() || fallback;
 }
 
+function getPartidasPageUrl() {
+  return GROUP_VALUE === 'domingo' ? '/domingo/partidas' : '/partidas';
+}
+
 function buildSetupSummary(names) {
   if (!names.length) {
     return 'Nenhum atleta selecionado';
@@ -211,39 +215,11 @@ function refreshRosterPanels() {
   });
 }
 
-function renderCurrentTeams(record) {
-  if (record.matchStatus !== 'started') {
-    return '';
-  }
-
-  const teamA = Array.isArray(record.teamA) ? record.teamA : [];
-  const teamB = Array.isArray(record.teamB) ? record.teamB : [];
-  const teamNameA = getTeamDisplayName(record.teamNameA, 'Time A');
-  const teamNameB = getTeamDisplayName(record.teamNameB, 'Time B');
-
-  return `
-    <div class="confirmados-teams partida-current-teams">
-      <div class="confirmados-team-card">
-        <h4>${escapeHtml(teamNameA)} (${teamA.length})</h4>
-        <ul class="confirmados-team-list">
-          ${teamA.map((name) => `<li><span>${escapeHtml(name)}</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
-        </ul>
-      </div>
-      <div class="confirmados-team-card">
-        <h4>${escapeHtml(teamNameB)} (${teamB.length})</h4>
-        <ul class="confirmados-team-list">
-          ${teamB.map((name) => `<li><span>${escapeHtml(name)}</span></li>`).join('') || '<li><span>Sem atletas</span></li>'}
-        </ul>
-      </div>
-    </div>
-  `;
-}
-
 function renderSetupForm(record) {
   const draft = getSetupDraft();
   const isLoggedIn = getIsLoggedIn();
   const allNames = Array.isArray(record.names) ? record.names : [];
-  const submitLabel = record.matchStatus === 'started' ? 'Salvar configuracao' : 'Iniciar partida';
+  const submitLabel = 'Iniciar partida';
 
   return `
     <form id="match-setup-form" class="partidas-setup-panel" autocomplete="off">
@@ -304,7 +280,6 @@ function renderPage() {
     <section class="card partida-page-stack">
       <h2>${matchStatus === 'started' ? 'Editar Partida' : 'Criar Partida'}</h2>
       ${renderSetupForm(recordCache)}
-      ${renderCurrentTeams(recordCache)}
     </section>
   `;
 }
@@ -420,7 +395,7 @@ rootEl.addEventListener('submit', async (event) => {
       PARTIDAS_UPDATE_KEY,
       JSON.stringify({ ts: Date.now(), group: GROUP_VALUE || '', date: currentDate, action: 'start-match' })
     );
-    setStatus('Partida salva com sucesso.');
+    window.location.assign(getPartidasPageUrl());
   } catch (error) {
     setStatus(error.message || 'Erro ao salvar partida.', true);
   }

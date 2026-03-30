@@ -86,6 +86,68 @@ function getActionLabel(status) {
   return status === 'started' ? 'Abrir partida' : 'Iniciar';
 }
 
+function getTeamScore(record, teamKey) {
+  const directValue = Number(teamKey === 'A' ? record.scoreA : record.scoreB);
+  if (!Number.isNaN(directValue)) {
+    return directValue;
+  }
+
+  const goalsByTeamName = record.goalsByTeamName && typeof record.goalsByTeamName === 'object'
+    ? record.goalsByTeamName
+    : {};
+  const teamGoals = goalsByTeamName[teamKey] && typeof goalsByTeamName[teamKey] === 'object'
+    ? goalsByTeamName[teamKey]
+    : {};
+
+  return Object.values(teamGoals).reduce((total, value) => total + Number(value || 0), 0);
+}
+
+function renderTeamPlayers(names) {
+  return (Array.isArray(names) ? names : [])
+    .map((name) => `<li><span>${escapeHtml(name)}</span></li>`)
+    .join('') || '<li><span>Sem atletas</span></li>';
+}
+
+function renderStartedMatchDetails(record) {
+  const teamA = Array.isArray(record.teamA) ? record.teamA : [];
+  const teamB = Array.isArray(record.teamB) ? record.teamB : [];
+  const teamNameA = String(record.teamNameA || 'Time A').trim() || 'Time A';
+  const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
+  const scoreA = getTeamScore(record, 'A');
+  const scoreB = getTeamScore(record, 'B');
+
+  return `
+    <div class="partidas-details">
+      <div class="partidas-scoreboard">
+        <div class="partidas-score-col">
+          <p class="partidas-score-team-label">${escapeHtml(teamNameA)}</p>
+          <p class="partidas-score-value">${scoreA}</p>
+        </div>
+        <div class="partidas-score-sep">X</div>
+        <div class="partidas-score-col">
+          <p class="partidas-score-team-label">${escapeHtml(teamNameB)}</p>
+          <p class="partidas-score-value">${scoreB}</p>
+        </div>
+      </div>
+
+      <div class="confirmados-teams partidas-current-teams">
+        <div class="confirmados-team-card">
+          <h4>${escapeHtml(teamNameA)} (${teamA.length})</h4>
+          <ul class="confirmados-team-list">
+            ${renderTeamPlayers(teamA)}
+          </ul>
+        </div>
+        <div class="confirmados-team-card">
+          <h4>${escapeHtml(teamNameB)} (${teamB.length})</h4>
+          <ul class="confirmados-team-list">
+            ${renderTeamPlayers(teamB)}
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function request(url) {
   const response = await fetch(url, {
     headers: {
@@ -113,14 +175,17 @@ function renderRecords(records) {
       const confirmadosCount = Number(record.count || 0) || (Array.isArray(record.names) ? record.names.length : 0);
 
       return `
-      <article class="confirmados-item partidas-list-row">
-        <div class="partidas-list-main">
-          <h3 class="partidas-date-title">${formatDate(record.date)}</h3>
-          <p class="partidas-date-meta">${confirmadosCount} confirmados <span class="partidas-status-badge ${getMatchStatusClassName(matchStatus)}">${getMatchStatusLabel(matchStatus)}</span></p>
+      <article class="confirmados-item">
+        <div class="partidas-list-row">
+          <div class="partidas-list-main">
+            <h3 class="partidas-date-title">${formatDate(record.date)}</h3>
+            <p class="partidas-date-meta">${confirmadosCount} confirmados <span class="partidas-status-badge ${getMatchStatusClassName(matchStatus)}">${getMatchStatusLabel(matchStatus)}</span></p>
+          </div>
+          <div class="partidas-list-actions">
+            <a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>
+          </div>
         </div>
-        <div class="partidas-list-actions">
-          <a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>
-        </div>
+        ${matchStatus === 'started' ? renderStartedMatchDetails(record) : ''}
       </article>
     `;
     })
