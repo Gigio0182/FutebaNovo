@@ -10,6 +10,7 @@ let isLoadingRecords = false;
 let recordsCache = [];
 let goalDialog = null;
 let goalDialogState = null;
+let openFinishedMatchDetails = new Set();
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -118,6 +119,24 @@ function getActionLabel(status) {
   }
 
   return '';
+}
+
+function isMatchDetailsCollapsed(date) {
+  return !openFinishedMatchDetails.has(String(date || ''));
+}
+
+function setMatchDetailsCollapsed(date, shouldCollapse) {
+  const key = String(date || '');
+  if (!key) {
+    return;
+  }
+
+  if (shouldCollapse) {
+    openFinishedMatchDetails.delete(key);
+    return;
+  }
+
+  openFinishedMatchDetails.add(key);
 }
 
 function getRecordByDate(date) {
@@ -357,13 +376,14 @@ function renderMatchDetails(record) {
   const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
   const isEditable = String(record.matchStatus || '') === 'started';
   const isFinished = String(record.matchStatus || '') === 'finished';
+  const isCollapsed = isFinished && isMatchDetailsCollapsed(record.date);
   const latestEvent = getLatestEvent(record);
   const latestEventId = latestEvent && latestEvent.id ? String(latestEvent.id) : '';
   const scoreA = getTeamScore(record, 'A');
   const scoreB = getTeamScore(record, 'B');
 
   return `
-    <div class="partidas-details ${isFinished ? 'is-collapsed' : ''}" data-role="match-details" data-date="${escapeAttr(record.date)}">
+    <div class="partidas-details ${isCollapsed ? 'is-collapsed' : ''}" data-role="match-details" data-date="${escapeAttr(record.date)}">
       <div class="partidas-scoreboard">
         <div class="partidas-score-col">
           <p class="partidas-score-team-label">${escapeHtml(teamNameA)}</p>
@@ -447,7 +467,7 @@ function renderRecords(records) {
           </div>
           <div class="partidas-list-actions">
             ${matchStatus === 'finished'
-              ? `<button type="button" class="confirmados-action-btn" data-action="toggle-match-details" data-date="${escapeAttr(record.date)}">Mostrar detalhes</button>`
+              ? `<button type="button" class="confirmados-action-btn" data-action="toggle-match-details" data-date="${escapeAttr(record.date)}">${isMatchDetailsCollapsed(record.date) ? 'Mostrar detalhes' : 'Ocultar detalhes'}</button>`
               : `<a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>`}
           </div>
         </div>
@@ -478,14 +498,14 @@ confirmadosListEl.addEventListener('click', (event) => {
   const toggleDetailsButton = event.target.closest('[data-action="toggle-match-details"]');
   if (toggleDetailsButton) {
     const date = String(toggleDetailsButton.dataset.date || '').trim();
-    const details = Array.from(confirmadosListEl.querySelectorAll('[data-role="match-details"]'))
-      .find((element) => String(element.dataset.date || '') === date);
-    if (!details) {
+    const record = getRecordByDate(date);
+    if (!record || String(record.matchStatus || '') !== 'finished') {
       return;
     }
 
-    const isCollapsed = details.classList.toggle('is-collapsed');
-    toggleDetailsButton.textContent = isCollapsed ? 'Mostrar detalhes' : 'Ocultar detalhes';
+    const nextCollapsed = !isMatchDetailsCollapsed(date);
+    setMatchDetailsCollapsed(date, nextCollapsed);
+    renderRecords(recordsCache);
     return;
   }
 
