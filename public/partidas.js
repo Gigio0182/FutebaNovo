@@ -324,6 +324,7 @@ function renderMatchDetails(record) {
   const teamNameA = String(record.teamNameA || 'Time A').trim() || 'Time A';
   const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
   const isEditable = String(record.matchStatus || '') === 'started';
+  const isFinished = String(record.matchStatus || '') === 'finished';
   const scoreA = getTeamScore(record, 'A');
   const scoreB = getTeamScore(record, 'B');
 
@@ -365,6 +366,12 @@ function renderMatchDetails(record) {
           </div>
         </div>
       </div>
+
+      ${isEditable ? `
+        <div class="partidas-details-footer">
+          <button type="button" class="btn danger partidas-finalize-btn" data-action="finalize-match" data-date="${escapeAttr(record.date)}">Finalizar</button>
+        </div>
+      ` : ''}
     </div>
   `;
 }
@@ -430,6 +437,60 @@ function notifyPartidasUpdate(date, action) {
 }
 
 confirmadosListEl.addEventListener('click', (event) => {
+  const finalizeButton = event.target.closest('[data-action="finalize-match"]');
+  if (finalizeButton) {
+    const date = String(finalizeButton.dataset.date || '').trim();
+    const record = getRecordByDate(date);
+    if (!record || String(record.matchStatus || '') !== 'started') {
+      return;
+    }
+
+    event.preventDefault();
+    (async () => {
+      try {
+        await request(buildApiUrl(), {
+          method: 'PUT',
+          body: JSON.stringify({
+            action: 'finalize-match',
+            date,
+            teamNameA: record.teamNameA,
+            teamNameB: record.teamNameB,
+            teamA: record.teamA,
+            teamB: record.teamB
+          })
+        });
+
+        notifyPartidasUpdate(date, 'finalize-match');
+        await loadRecords();
+        setStatus('Partida finalizada com sucesso.');
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    })();
+    return;
+  }
+
+  const actionButton = event.target.closest('a.confirmados-action-btn[href]');
+  if (actionButton) {
+    const href = actionButton.getAttribute('href') || '';
+    if (!href) {
+      return;
+    }
+
+    const date = String(new URL(href, window.location.origin).searchParams.get('date') || '').trim();
+    const record = getRecordByDate(date);
+    if (record && String(record.matchStatus || '') === 'not-started') {
+      const hasStartedMatch = recordsCache.some((item) => String(item.matchStatus || '') === 'started');
+      if (hasStartedMatch) {
+        event.preventDefault();
+        window.alert('Ja existe uma partida iniciada. Finalize a atual antes de iniciar outra.');
+        return;
+      }
+    }
+
+    return;
+  }
+
   const button = event.target.closest('[data-action="open-goal-dialog"]');
   if (!button) {
     return;

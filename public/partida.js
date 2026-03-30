@@ -226,8 +226,8 @@ function renderSetupForm(record) {
   const draft = getSetupDraft();
   const allNames = Array.isArray(record.names) ? record.names : [];
   const matchStatus = String(record.matchStatus || 'not-started');
-  const submitLabel = matchStatus === 'started' ? 'Finalizar' : 'Iniciar partida';
-  const submitAction = matchStatus === 'started' ? 'finalize-match' : 'start-match';
+  const submitLabel = matchStatus === 'started' ? 'Salvar alterações' : 'Iniciar partida';
+  const submitAction = 'start-match';
   const locked = !getIsLoggedIn() || matchStatus === 'finished';
   const canSubmit = !locked && matchStatus !== 'finished';
 

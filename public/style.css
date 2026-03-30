@@ -1676,6 +1676,18 @@ textarea {
   width: 100%;
 }
 
+.partidas-details-footer {
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #d8e8e2;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.partidas-finalize-btn {
+  min-width: 9rem;
+}
+
 .partidas-events-list-right .partidas-event-row {
   justify-content: flex-start;
 }
