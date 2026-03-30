@@ -150,6 +150,15 @@ function getTeamScore(record, teamKey) {
   return Object.values(teamGoals).reduce((total, value) => total + Number(value || 0), 0);
 }
 
+function getLatestEvent(record) {
+  const events = Array.isArray(record.events) ? record.events : [];
+  if (!events.length) {
+    return null;
+  }
+
+  return events[events.length - 1] || null;
+}
+
 function getEventLabel(event) {
   if (!event || typeof event !== 'object') {
     return 'Gol';
@@ -188,7 +197,7 @@ function renderTeamPlayers(record, teamKey, isEditable = false) {
     `).join('') || '<li><span>Sem atletas</span></li>';
 }
 
-function renderTeamEvents(record, teamKey) {
+function renderTeamEvents(record, teamKey, isEditable = false, latestEventId = '') {
   const events = Array.isArray(record.events) ? record.events : [];
   const teamEvents = events.filter((event) => event && event.scoringTeam === teamKey);
 
@@ -196,12 +205,27 @@ function renderTeamEvents(record, teamKey) {
     return '<li class="partidas-event-empty">Nenhum evento registrado.</li>';
   }
 
-  return teamEvents.map((event) => `
+  return teamEvents.map((event) => {
+    const canRemove = Boolean(isEditable && event && event.id && String(event.id) === String(latestEventId));
+
+    return `
       <li class="partidas-event-row">
         <span class="partidas-event-icon">⚽</span>
         <span class="partidas-event-player">${escapeHtml(getEventLabel(event))}</span>
+        ${canRemove ? `
+          <button
+            type="button"
+            class="partidas-event-remove-btn"
+            data-action="remove-last-event"
+            data-date="${escapeAttr(record.date)}"
+            data-team="${teamKey}"
+            data-name="${escapeAttr(String(event.playerName || ''))}"
+            data-own-goal="${event.ownGoal ? '1' : '0'}"
+          >🗑️</button>
+        ` : ''}
       </li>
-    `).join('');
+    `;
+  }).join('');
 }
 
 function renderGoalDialogOptions(record, teamKey, playerName) {
@@ -332,7 +356,8 @@ function renderMatchDetails(record) {
   const teamNameA = String(record.teamNameA || 'Time A').trim() || 'Time A';
   const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
   const isEditable = String(record.matchStatus || '') === 'started';
-  const isFinished = String(record.matchStatus || '') === 'finished';
+  const latestEvent = getLatestEvent(record);
+  const latestEventId = latestEvent && latestEvent.id ? String(latestEvent.id) : '';
   const scoreA = getTeamScore(record, 'A');
   const scoreB = getTeamScore(record, 'B');
 
@@ -358,7 +383,7 @@ function renderMatchDetails(record) {
           <div class="partidas-team-events">
             <p class="partidas-team-events-title">Eventos</p>
             <ul class="partidas-events-list">
-              ${renderTeamEvents(record, 'A')}
+              ${renderTeamEvents(record, 'A', isEditable, latestEventId)}
             </ul>
           </div>
         </div>
@@ -369,7 +394,7 @@ function renderMatchDetails(record) {
           <div class="partidas-team-events">
             <p class="partidas-team-events-title">Eventos</p>
             <ul class="partidas-events-list">
-              ${renderTeamEvents(record, 'B')}
+              ${renderTeamEvents(record, 'B', isEditable, latestEventId)}
             </ul>
           </div>
         </div>
@@ -447,6 +472,42 @@ function notifyPartidasUpdate(date, action) {
 }
 
 confirmadosListEl.addEventListener('click', (event) => {
+  const removeEventButton = event.target.closest('[data-action="remove-last-event"]');
+  if (removeEventButton) {
+    const date = String(removeEventButton.dataset.date || '').trim();
+    const team = String(removeEventButton.dataset.team || '').trim().toUpperCase();
+    const name = String(removeEventButton.dataset.name || '').trim();
+    const ownGoal = String(removeEventButton.dataset.ownGoal || '') === '1';
+    const record = getRecordByDate(date);
+
+    if (!record || String(record.matchStatus || '') !== 'started' || !name || (team !== 'A' && team !== 'B')) {
+      return;
+    }
+
+    event.preventDefault();
+    (async () => {
+      try {
+        await request(buildApiUrl(), {
+          method: 'PUT',
+          body: JSON.stringify({
+            action: 'remove-goal',
+            date,
+            name,
+            team,
+            ownGoal
+          })
+        });
+
+        notifyPartidasUpdate(date, 'remove-goal');
+        await loadRecords();
+        setStatus('Registro removido com sucesso.');
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    })();
+    return;
+  }
+
   const finalizeButton = event.target.closest('[data-action="finalize-match"]');
   if (finalizeButton) {
     const date = String(finalizeButton.dataset.date || '').trim();
