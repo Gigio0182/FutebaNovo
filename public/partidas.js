@@ -821,7 +821,7 @@ confirmadosListEl.addEventListener('click', (event) => {
   if (finalizeButton) {
     const date = String(finalizeButton.dataset.date || '').trim();
     const record = getRecordByDate(date);
-    if (!record || String(record.matchStatus || '') !== 'started') {
+    if (!record) {
       return;
     }
 

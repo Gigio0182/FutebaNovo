@@ -1731,6 +1731,8 @@ textarea {
 }
 
 .partidas-details.is-collapsed .partidas-scoreboard,
+.partidas-details.is-collapsed .partidas-clock-row,
+.partidas-details.is-collapsed .partidas-events-panel,
 .partidas-details.is-collapsed .partidas-current-teams,
 .partidas-details.is-collapsed .partidas-details-footer {
   display: none;
