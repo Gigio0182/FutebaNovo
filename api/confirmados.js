@@ -713,6 +713,9 @@ module.exports = async (req, res) => {
         const nextTeamB = normalizeRoster(body.teamB, namesMap);
         const teamAKeys = new Set(nextTeamA.map((name) => normalizeNameKey(name)));
         const hasOverlap = nextTeamB.some((name) => teamAKeys.has(normalizeNameKey(name)));
+        const currentMatchAlreadyStarted = normalizeMatchStatus(data.matchStatus) === 'started';
+        const startedMatchesSnapshot = await confirmadosCollection.where('matchStatus', '==', 'started').get();
+        const anotherStartedMatchExists = startedMatchesSnapshot.docs.some((doc) => String(doc.id || doc.data().date || '') !== date);
 
         if (!nextTeamA.length) {
           sendJson(res, 400, { error: 'Selecione pelo menos um atleta para o Time A.' });
@@ -726,6 +729,11 @@ module.exports = async (req, res) => {
 
         if (hasOverlap) {
           sendJson(res, 400, { error: 'Um atleta nao pode estar nos dois times.' });
+          return;
+        }
+
+        if (!currentMatchAlreadyStarted && anotherStartedMatchExists) {
+          sendJson(res, 400, { error: 'Ja existe uma partida iniciada. Finalize ou desative a atual antes de iniciar outra.' });
           return;
         }
 

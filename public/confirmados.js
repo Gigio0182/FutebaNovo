@@ -347,6 +347,10 @@ function renderRecords(records) {
 
         ${isExpanded ? `
         <div class="partidas-details">
+          <div class="confirmados-list-actions">
+            <button class="btn secondary" type="button" data-action="edit-record" data-date="${record.date}">Editar</button>
+            <button class="btn danger" type="button" data-action="delete-record" data-date="${record.date}">Excluir</button>
+          </div>
           <ul class="confirmados-names">
             ${(record.names || []).map((name) => `<li>${escapeHtml(name)}</li>`).join('') || '<li>Sem atletas confirmados.</li>'}
           </ul>
@@ -579,6 +583,53 @@ confirmadosListEl.addEventListener('click', async (event) => {
     expandedRecordDate = expandedRecordDate === date ? null : date;
     renderRecords(recordsCache);
     return;
+  }
+
+  const editBtn = event.target.closest('button[data-action="edit-record"][data-date]');
+  if (editBtn) {
+    const date = String(editBtn.dataset.date || '').trim();
+    const record = recordsCache.find((item) => String(item.date || '') === date);
+    if (!record) {
+      setStatus('Nao foi possivel localizar a lista para editar.', true);
+      return;
+    }
+
+    expandedRecordDate = date;
+    renderRecords(recordsCache);
+    fillFormFromRecord(record);
+    setStatus('Lista carregada para edicao.');
+    return;
+  }
+
+  const deleteBtn = event.target.closest('button[data-action="delete-record"][data-date]');
+  if (deleteBtn) {
+    const date = String(deleteBtn.dataset.date || '').trim();
+    const record = recordsCache.find((item) => String(item.date || '') === date);
+    if (!record) {
+      setStatus('Nao foi possivel localizar a lista para excluir.', true);
+      return;
+    }
+
+    const confirmed = window.confirm(`Excluir a lista de ${formatDate(date)}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    if (!navigator.onLine) {
+      enqueueAction({ type: 'delete-record', date });
+      setStatus('Exclusao salva offline. Sera sincronizada quando voltar conexao.');
+      return;
+    }
+
+    try {
+      await request(buildApiUrl({ date }), { method: 'DELETE' });
+      notifyPartidasUpdate(date, 'delete-record');
+      expandedRecordDate = null;
+      await loadRecords();
+      setStatus('Lista excluida com sucesso.');
+    } catch (error) {
+      setStatus(error.message, true);
+    }
   }
 });
 

@@ -69,6 +69,9 @@
   box-shadow: 0 8px 16px rgba(180, 83, 9, 0.28);
 }
 
+  .btn.danger {
+    background: #b91c1c;
+  }
 .ranking-hero {
   position: relative;
   padding-right: 4.5rem;
@@ -815,6 +818,15 @@ textarea {
   gap: 0.35rem;
 }
 
+.confirmados-list-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.65rem;
+}
+
 .confirmados-action-btn {
   width: auto;
   margin-top: 0;
@@ -836,6 +848,11 @@ textarea {
 
 .confirmados-action-btn.danger {
   background: #b91c1c;
+}
+
+.confirmados-list-actions .btn {
+  width: auto;
+  margin-top: 0;
 }
 
 .confirmados-hint {
