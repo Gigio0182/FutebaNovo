@@ -219,7 +219,8 @@ function renderSetupForm(record) {
   const draft = getSetupDraft();
   const isLoggedIn = getIsLoggedIn();
   const allNames = Array.isArray(record.names) ? record.names : [];
-  const submitLabel = 'Iniciar partida';
+  const isStarted = record.matchStatus === 'started';
+  const submitLabel = isStarted ? 'Salvar alterações' : 'Iniciar partida';
 
   return `
     <form id="match-setup-form" class="partidas-setup-panel" autocomplete="off">
@@ -242,7 +243,10 @@ function renderSetupForm(record) {
       </div>
       <div class="partidas-setup-actions">
         ${isLoggedIn
-          ? `<button class="btn" type="submit">${submitLabel}</button>`
+          ? `
+            <button class="btn secondary" type="button" data-action="go-back">Voltar</button>
+            <button class="btn" type="submit">${submitLabel}</button>
+          `
           : '<span class="partidas-status-helper">Faca login no cadastro para salvar a partida.</span>'}
       </div>
     </form>
@@ -398,6 +402,17 @@ rootEl.addEventListener('submit', async (event) => {
     window.location.assign(getPartidasPageUrl());
   } catch (error) {
     setStatus(error.message || 'Erro ao salvar partida.', true);
+  }
+});
+
+rootEl.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  if (target.closest('[data-action="go-back"]')) {
+    window.history.back();
   }
 });
 

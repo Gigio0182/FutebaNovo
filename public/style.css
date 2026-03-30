@@ -1382,8 +1382,14 @@ textarea {
 
 .partidas-setup-actions {
   display: flex;
+  align-items: center;
+  gap: 0.65rem;
   justify-content: flex-end;
   margin-top: 0.85rem;
+}
+
+.partidas-setup-actions .btn {
+  min-width: 10.5rem;
 }
 
 .partidas-share-row {
@@ -1706,7 +1712,9 @@ textarea {
   }
 
   .partidas-setup-actions .btn {
-    width: 100%;
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .partidas-setup-callout {

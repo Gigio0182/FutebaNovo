@@ -132,13 +132,11 @@ function renderStartedMatchDetails(record) {
 
       <div class="confirmados-teams partidas-current-teams">
         <div class="confirmados-team-card">
-          <h4>${escapeHtml(teamNameA)} (${teamA.length})</h4>
           <ul class="confirmados-team-list">
             ${renderTeamPlayers(teamA)}
           </ul>
         </div>
         <div class="confirmados-team-card">
-          <h4>${escapeHtml(teamNameB)} (${teamB.length})</h4>
           <ul class="confirmados-team-list">
             ${renderTeamPlayers(teamB)}
           </ul>
