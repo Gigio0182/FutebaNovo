@@ -9,7 +9,11 @@ function isValidDate(dateText) {
 
 function normalizeMatchStatus(value) {
   const normalized = String(value || '').trim().toLowerCase();
-  return normalized === 'started' ? 'started' : 'not-started';
+  if (normalized === 'started' || normalized === 'finished') {
+    return normalized;
+  }
+
+  return 'not-started';
 }
 
 function normalizeTeamName(value, fallback) {
@@ -654,7 +658,7 @@ module.exports = async (req, res) => {
       const namesMap = mapNamesByKey(names);
       const nameKey = normalizeNameKey(rawName);
       const canonicalName = namesMap.get(nameKey);
-      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'set-match-status', 'toggle-match-status', 'start-match']);
+      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'set-match-status', 'toggle-match-status', 'start-match', 'finalize-match']);
 
       if (!canonicalName && !actionsWithoutName.has(action)) {
         sendJson(res, 400, { error: 'Atleta nao encontrado na lista de confirmados da data.' });
@@ -763,6 +767,47 @@ module.exports = async (req, res) => {
           teamA: nextTeamA,
           teamB: nextTeamB,
           events,
+          scoreA,
+          scoreB
+        });
+        return;
+      }
+
+      if (action === 'finalize-match') {
+        const nextTeamNameA = normalizeTeamName(body.teamNameA, teamNameA);
+        const nextTeamNameB = normalizeTeamName(body.teamNameB, teamNameB);
+        const nextTeamA = normalizeRoster(body.teamA, namesMap);
+        const nextTeamB = normalizeRoster(body.teamB, namesMap);
+
+        if (matchStatus !== 'started') {
+          sendJson(res, 400, { error: 'A partida precisa estar iniciada para ser finalizada.' });
+          return;
+        }
+
+        matchStatus = 'finished';
+
+        await docRef.set(
+          {
+            teamNameA: nextTeamNameA,
+            teamNameB: nextTeamNameB,
+            teamA: nextTeamA,
+            teamB: nextTeamB,
+            matchStatus,
+            scoreA,
+            scoreB,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          matchStatus,
+          teamNameA: nextTeamNameA,
+          teamNameB: nextTeamNameB,
+          teamA: nextTeamA,
+          teamB: nextTeamB,
           scoreA,
           scoreB
         });

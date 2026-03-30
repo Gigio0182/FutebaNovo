@@ -1212,6 +1212,10 @@ textarea {
   background: #dff7eb;
   color: #0f6b44;
 }
+.partidas-status-badge.is-finished {
+  background: #e8edf4;
+  color: #31435b;
+}
 
 .partidas-status-badge.is-not-started {
   background: #fef3c7;

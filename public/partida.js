@@ -88,10 +88,18 @@ function setStatus(message, isError = false) {
 }
 
 function getMatchStatusLabel(status) {
+  if (status === 'finished') {
+    return 'Finalizada';
+  }
+
   return status === 'started' ? 'Iniciada' : 'Nao iniciada';
 }
 
 function getMatchStatusClassName(status) {
+  if (status === 'finished') {
+    return 'is-finished';
+  }
+
   return status === 'started' ? 'is-started' : 'is-not-started';
 }
 
@@ -165,11 +173,10 @@ function syncTeamNameInputs() {
   }
 }
 
-function renderRosterPanel(teamKey, names) {
+function renderRosterPanel(teamKey, names, locked = !getIsLoggedIn()) {
   const draft = getSetupDraft();
   const selectedNames = teamKey === 'A' ? draft.teamA : draft.teamB;
   const title = teamKey === 'A' ? 'Atletas do Time A' : 'Atletas do Time B';
-  const locked = !getIsLoggedIn();
 
   return `
     <section class="partidas-roster-panel" data-role="roster-panel" data-team="${teamKey}">
@@ -217,10 +224,12 @@ function refreshRosterPanels() {
 
 function renderSetupForm(record) {
   const draft = getSetupDraft();
-  const isLoggedIn = getIsLoggedIn();
   const allNames = Array.isArray(record.names) ? record.names : [];
-  const isStarted = record.matchStatus === 'started';
-  const submitLabel = isStarted ? 'Salvar alterações' : 'Iniciar partida';
+  const matchStatus = String(record.matchStatus || 'not-started');
+  const submitLabel = matchStatus === 'started' ? 'Finalizar' : 'Iniciar partida';
+  const submitAction = matchStatus === 'started' ? 'finalize-match' : 'start-match';
+  const locked = !getIsLoggedIn() || matchStatus === 'finished';
+  const canSubmit = !locked && matchStatus !== 'finished';
 
   return `
     <form id="match-setup-form" class="partidas-setup-panel" autocomplete="off">
@@ -229,25 +238,27 @@ function renderSetupForm(record) {
         <div class="partidas-setup-column">
           <label class="confirmados-field">
             Nome do Time A
-            <input id="team-name-a" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
+            <input id="team-name-a" type="text" maxlength="40" value="${escapeAttr(draft.teamNameA)}" placeholder="Time A" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" ${locked ? 'disabled' : ''} />
           </label>
-          ${renderRosterPanel('A', allNames)}
+          ${renderRosterPanel('A', allNames, locked)}
         </div>
         <div class="partidas-setup-column">
           <label class="confirmados-field">
             Nome do Time B
-            <input id="team-name-b" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" ${isLoggedIn ? '' : 'disabled'} />
+            <input id="team-name-b" type="text" maxlength="40" value="${escapeAttr(draft.teamNameB)}" placeholder="Time B" required autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" ${locked ? 'disabled' : ''} />
           </label>
-          ${renderRosterPanel('B', allNames)}
+          ${renderRosterPanel('B', allNames, locked)}
         </div>
       </div>
       <div class="partidas-setup-actions">
-        ${isLoggedIn
+        ${canSubmit
           ? `
             <button class="btn secondary" type="button" data-action="go-back">Voltar</button>
-            <button class="btn" type="submit">${submitLabel}</button>
+            <button class="btn" type="submit" data-submit-action="${submitAction}">${submitLabel}</button>
           `
-          : '<span class="partidas-status-helper">Faca login no cadastro para salvar a partida.</span>'}
+          : matchStatus === 'finished'
+            ? '<span class="partidas-status-helper">Partida finalizada.</span>'
+            : '<span class="partidas-status-helper">Faca login no cadastro para salvar a partida.</span>'}
       </div>
     </form>
   `;
@@ -380,11 +391,14 @@ rootEl.addEventListener('submit', async (event) => {
 
   syncTeamNameInputs();
 
+  const submitButton = form.querySelector('button[type="submit"]');
+  const submitAction = submitButton ? String(submitButton.dataset.submitAction || 'start-match') : 'start-match';
+
   try {
     await request(buildApiUrl(), {
       method: 'PUT',
       body: JSON.stringify({
-        action: 'start-match',
+        action: submitAction,
         date: currentDate,
         teamNameA: setupDraft.teamNameA,
         teamNameB: setupDraft.teamNameB,
@@ -397,10 +411,11 @@ rootEl.addEventListener('submit', async (event) => {
     await loadRecord();
     localStorage.setItem(
       PARTIDAS_UPDATE_KEY,
-      JSON.stringify({ ts: Date.now(), group: GROUP_VALUE || '', date: currentDate, action: 'start-match' })
+      JSON.stringify({ ts: Date.now(), group: GROUP_VALUE || '', date: currentDate, action: submitAction })
     );
     window.location.assign(getPartidasPageUrl());
   } catch (error) {
+    window.alert(error.message || 'Nao foi possivel salvar a partida.');
     setStatus(error.message || 'Erro ao salvar partida.', true);
   }
 });

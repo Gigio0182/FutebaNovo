@@ -88,10 +88,18 @@ function setStatus(message, isError = false) {
 }
 
 function getMatchStatusLabel(status) {
+  if (status === 'finished') {
+    return 'Finalizada';
+  }
+
   return status === 'started' ? 'Iniciada' : 'Nao iniciada';
 }
 
 function getMatchStatusClassName(status) {
+  if (status === 'finished') {
+    return 'is-finished';
+  }
+
   return status === 'started' ? 'is-started' : 'is-not-started';
 }
 
@@ -150,22 +158,24 @@ function getEventLabel(event) {
   return `Gol de ${String(event.playerName || '')}`;
 }
 
-function renderTeamPlayers(record, teamKey) {
+function renderTeamPlayers(record, teamKey, isEditable = false) {
   const names = getTeamPlayers(record, teamKey);
 
   return names.map((name) => `
       <li class="partidas-player-row">
         <span class="partidas-player-name">${escapeHtml(name)}</span>
-        <button
-          type="button"
-          class="confirmados-action-btn partidas-goal-btn"
-          data-action="open-goal-dialog"
-          data-date="${escapeAttr(record.date)}"
-          data-team="${teamKey}"
-          data-name="${escapeAttr(name)}"
-        >
-          GOL
-        </button>
+        ${isEditable ? `
+          <button
+            type="button"
+            class="confirmados-action-btn partidas-goal-btn"
+            data-action="open-goal-dialog"
+            data-date="${escapeAttr(record.date)}"
+            data-team="${teamKey}"
+            data-name="${escapeAttr(name)}"
+          >
+            GOL
+          </button>
+        ` : ''}
       </li>
     `).join('') || '<li><span>Sem atletas</span></li>';
 }
@@ -310,9 +320,10 @@ function openGoalDialog(date, teamKey, playerName) {
   }
 }
 
-function renderStartedMatchDetails(record) {
+function renderMatchDetails(record) {
   const teamNameA = String(record.teamNameA || 'Time A').trim() || 'Time A';
   const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
+  const isEditable = String(record.matchStatus || '') === 'started';
   const scoreA = getTeamScore(record, 'A');
   const scoreB = getTeamScore(record, 'B');
 
@@ -333,7 +344,7 @@ function renderStartedMatchDetails(record) {
       <div class="confirmados-teams partidas-current-teams">
         <div class="confirmados-team-card">
           <ul class="confirmados-team-list">
-            ${renderTeamPlayers(record, 'A')}
+            ${renderTeamPlayers(record, 'A', isEditable)}
           </ul>
           <div class="partidas-team-events">
             <p class="partidas-team-events-title">Eventos</p>
@@ -344,7 +355,7 @@ function renderStartedMatchDetails(record) {
         </div>
         <div class="confirmados-team-card">
           <ul class="confirmados-team-list">
-            ${renderTeamPlayers(record, 'B')}
+            ${renderTeamPlayers(record, 'B', isEditable)}
           </ul>
           <div class="partidas-team-events">
             <p class="partidas-team-events-title">Eventos</p>
@@ -395,7 +406,7 @@ function renderRecords(records) {
             <a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>
           </div>
         </div>
-        ${matchStatus === 'started' ? renderStartedMatchDetails(record) : ''}
+        ${matchStatus === 'started' || matchStatus === 'finished' ? renderMatchDetails(record) : ''}
       </article>
     `;
     })
