@@ -5,6 +5,7 @@ const GROUP_VALUE = document.body.dataset.group || '';
 const AUTH_LINK = document.body.dataset.authLink || (GROUP_VALUE === 'domingo' ? '/domingo/athletes' : '/athletes');
 const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_futeba_token';
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
+const PARTIDA_DRAFT_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_partida_draft' : 'app_futeba_partida_draft';
 const currentDate = String(new URLSearchParams(window.location.search).get('date') || '').trim();
 
 let recordCache = null;
@@ -150,12 +151,74 @@ function createSetupDraft(record) {
   };
 }
 
+function saveSetupDraft() {
+  if (!currentDate || !setupDraft) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(
+      PARTIDA_DRAFT_KEY,
+      JSON.stringify({
+        group: GROUP_VALUE || '',
+        date: currentDate,
+        draft: setupDraft
+      })
+    );
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function clearSetupDraftStorage() {
+  try {
+    localStorage.removeItem(PARTIDA_DRAFT_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function loadSetupDraftFromStorage() {
+  try {
+    const raw = localStorage.getItem(PARTIDA_DRAFT_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const payload = JSON.parse(raw);
+    if (String(payload.group || '') !== GROUP_VALUE || String(payload.date || '') !== currentDate) {
+      return null;
+    }
+
+    const draft = payload.draft && typeof payload.draft === 'object' ? payload.draft : null;
+    if (!draft) {
+      return null;
+    }
+
+    return {
+      teamNameA: getTeamDisplayName(draft.teamNameA, 'Time A'),
+      teamNameB: getTeamDisplayName(draft.teamNameB, 'Time B'),
+      teamA: Array.isArray(draft.teamA) ? [...draft.teamA] : [],
+      teamB: Array.isArray(draft.teamB) ? [...draft.teamB] : []
+    };
+  } catch {
+    return null;
+  }
+}
+
 function getSetupDraft() {
   if (setupDraft) {
     return setupDraft;
   }
 
+  const storedDraft = loadSetupDraftFromStorage();
+  if (storedDraft) {
+    setupDraft = storedDraft;
+    return setupDraft;
+  }
+
   setupDraft = createSetupDraft(recordCache || {});
+  saveSetupDraft();
   return setupDraft;
 }
 
@@ -192,6 +255,8 @@ function syncTeamNameInputs() {
   if (teamNameBInput) {
     draft.teamNameB = String(teamNameBInput.value || '').trim() || 'Time B';
   }
+
+  saveSetupDraft();
 }
 
 function notifyPlayerTeamMove(playerName, fromTeamLabel, toTeamLabel) {
@@ -373,6 +438,7 @@ rootEl.addEventListener('change', (event) => {
       ? [...setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key), name]
       : setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key);
     setupDraft.teamB = setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key);
+    saveSetupDraft();
     refreshRosterPanels();
     if (target.checked && wasInTeamB) {
       notifyPlayerTeamMove(name, 'Time B', 'Time A');
@@ -388,6 +454,7 @@ rootEl.addEventListener('change', (event) => {
       ? [...setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key), name]
       : setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key);
     setupDraft.teamA = setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key);
+    saveSetupDraft();
     refreshRosterPanels();
     if (target.checked && wasInTeamA) {
       notifyPlayerTeamMove(name, 'Time A', 'Time B');
@@ -423,6 +490,7 @@ rootEl.addEventListener('submit', async (event) => {
     });
 
     setupDraft = null;
+    clearSetupDraftStorage();
     await loadRecord();
     localStorage.setItem(
       PARTIDAS_UPDATE_KEY,
@@ -452,6 +520,7 @@ window.addEventListener('storage', (event) => {
       const payload = JSON.parse(event.newValue);
       if (String(payload.group || '') === GROUP_VALUE && String(payload.date || '') === currentDate) {
         setupDraft = null;
+        clearSetupDraftStorage();
         loadRecord().catch((error) => {
           setStatus(error.message, true);
         });
