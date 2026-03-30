@@ -194,6 +194,69 @@ function getEventLabel(event) {
   return `Gol de ${String(event.playerName || '')}`;
 }
 
+function formatSummulaEvent(event) {
+  if (!event || typeof event !== 'object') {
+    return '';
+  }
+
+  if (event.ownGoal) {
+    return `Gol contra de ${String(event.playerName || '')}`;
+  }
+
+  if (event.assistName) {
+    return `Gol de ${String(event.playerName || '')} | Assistência: ${String(event.assistName || '')}`;
+  }
+
+  return `Gol de ${String(event.playerName || '')}`;
+}
+
+function buildSummulaText(record) {
+  const teamNameA = String(record.teamNameA || 'Time A').trim() || 'Time A';
+  const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
+  const scoreA = getTeamScore(record, 'A');
+  const scoreB = getTeamScore(record, 'B');
+  const dateLabel = formatDate(record.date);
+  const teamAPlayers = getTeamPlayers(record, 'A').join(', ') || 'Sem atletas';
+  const teamBPlayers = getTeamPlayers(record, 'B').join(', ') || 'Sem atletas';
+  const events = Array.isArray(record.events) ? record.events : [];
+
+  const eventLines = events.length
+    ? events
+        .map((event, index) => `${index + 1}. ${formatSummulaEvent(event)}`)
+        .filter(Boolean)
+        .join('\n')
+    : 'Sem eventos registrados.';
+
+  return [
+    `SÚMULA - ${dateLabel}`,
+    `Placar: ${teamNameA} ${scoreA} x ${scoreB} ${teamNameB}`,
+    '',
+    'Escalações:',
+    `${teamNameA}: ${teamAPlayers}`,
+    `${teamNameB}: ${teamBPlayers}`,
+    '',
+    'Gols e assistências:',
+    eventLines
+  ].join('\n');
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', 'readonly');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+}
+
 function renderTeamPlayers(record, teamKey, isEditable = false) {
   const names = getTeamPlayers(record, teamKey);
 
@@ -467,7 +530,10 @@ function renderRecords(records) {
           </div>
           <div class="partidas-list-actions">
             ${matchStatus === 'finished'
-              ? `<button type="button" class="confirmados-action-btn" data-action="toggle-match-details" data-date="${escapeAttr(record.date)}">${isMatchDetailsCollapsed(record.date) ? 'Mostrar detalhes' : 'Ocultar detalhes'}</button>`
+              ? `
+                <button type="button" class="confirmados-action-btn" data-action="toggle-match-details" data-date="${escapeAttr(record.date)}">${isMatchDetailsCollapsed(record.date) ? 'Mostrar detalhes' : 'Ocultar detalhes'}</button>
+                <button type="button" class="confirmados-action-btn" data-action="copy-summula" data-date="${escapeAttr(record.date)}">Súmula</button>
+              `
               : `<a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>`}
           </div>
         </div>
@@ -495,6 +561,26 @@ function notifyPartidasUpdate(date, action) {
 }
 
 confirmadosListEl.addEventListener('click', (event) => {
+  const copySummulaButton = event.target.closest('[data-action="copy-summula"]');
+  if (copySummulaButton) {
+    const date = String(copySummulaButton.dataset.date || '').trim();
+    const record = getRecordByDate(date);
+    if (!record || String(record.matchStatus || '') !== 'finished') {
+      return;
+    }
+
+    event.preventDefault();
+    (async () => {
+      try {
+        await copyTextToClipboard(buildSummulaText(record));
+        setStatus('Súmula copiada para a área de transferência.');
+      } catch (error) {
+        setStatus(error.message || 'Nao foi possivel copiar a súmula.', true);
+      }
+    })();
+    return;
+  }
+
   const toggleDetailsButton = event.target.closest('[data-action="toggle-match-details"]');
   if (toggleDetailsButton) {
     const date = String(toggleDetailsButton.dataset.date || '').trim();
