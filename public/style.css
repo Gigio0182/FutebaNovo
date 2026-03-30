@@ -1963,13 +1963,6 @@ textarea {
     padding: 0.38rem 0.3rem;
   }
 
-  .partidas-current-teams .confirmados-team-card h4 {
-    margin-bottom: 0.22rem;
-    font-size: 0.78rem;
-    line-height: 1.15;
-    text-align: center;
-  }
-
   .partidas-current-teams .confirmados-team-list {
     padding-left: 0;
     list-style: none;
