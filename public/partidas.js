@@ -121,6 +121,75 @@ function getActionLabel(status) {
   return '';
 }
 
+function formatMatchTimer(totalSeconds) {
+  const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function getMatchTimerState(record) {
+  const source = record && typeof record.matchTimer === 'object' ? record.matchTimer : {};
+  const status = String(source.status || 'paused').trim().toLowerCase() === 'running' ? 'running' : 'paused';
+  const elapsedSeconds = Math.max(0, Math.floor(Number(source.elapsedSeconds || 0)));
+  const startedAt = String(source.startedAt || '').trim();
+
+  return {
+    status,
+    elapsedSeconds,
+    startedAt
+  };
+}
+
+function getMatchTimerElapsedSeconds(timerState) {
+  const elapsedSeconds = Math.max(0, Math.floor(Number(timerState && timerState.elapsedSeconds || 0)));
+  if (!timerState || timerState.status !== 'running' || !timerState.startedAt) {
+    return elapsedSeconds;
+  }
+
+  const startedAtMs = Date.parse(timerState.startedAt);
+  if (Number.isNaN(startedAtMs)) {
+    return elapsedSeconds;
+  }
+
+  return elapsedSeconds + Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+}
+
+function getMatchTimerLabel(record) {
+  return getMatchTimerState(record).status === 'running' ? 'Pausar' : 'Reiniciar';
+}
+
+function updateMatchTimerDisplays() {
+  const timerElements = confirmadosListEl.querySelectorAll('[data-role="match-timer"]');
+  timerElements.forEach((timerEl) => {
+    const status = String(timerEl.dataset.timerStatus || 'paused').trim().toLowerCase();
+    const elapsedSeconds = Math.max(0, Math.floor(Number(timerEl.dataset.timerElapsed || 0)));
+    const startedAt = String(timerEl.dataset.timerStartedAt || '').trim();
+    const displaySeconds = getMatchTimerElapsedSeconds({ status, elapsedSeconds, startedAt });
+    const valueEl = timerEl.querySelector('[data-role="match-timer-value"]');
+    if (valueEl) {
+      valueEl.textContent = formatMatchTimer(displaySeconds);
+    }
+
+    const footerButton = timerEl.closest('.partidas-details')?.querySelector('[data-action="toggle-match-timer"]');
+    if (footerButton) {
+      footerButton.textContent = status === 'running' ? 'Pausar' : 'Reiniciar';
+    }
+  });
+}
+
+let matchTimerTicker = null;
+
+function startMatchTimerTicker() {
+  if (matchTimerTicker) {
+    return;
+  }
+
+  updateMatchTimerDisplays();
+  matchTimerTicker = window.setInterval(updateMatchTimerDisplays, 1000);
+}
+
 function isMatchDetailsCollapsed(date) {
   return !openFinishedMatchDetails.has(String(date || ''));
 }
@@ -475,6 +544,8 @@ function renderMatchDetails(record) {
   const latestEventId = latestEvent && latestEvent.id ? String(latestEvent.id) : '';
   const scoreA = getTeamScore(record, 'A');
   const scoreB = getTeamScore(record, 'B');
+  const timerState = getMatchTimerState(record);
+  const timerText = formatMatchTimer(getMatchTimerElapsedSeconds(timerState));
 
   return `
     <div class="partidas-details ${isCollapsed ? 'is-collapsed' : ''}" data-role="match-details" data-date="${escapeAttr(record.date)}">
@@ -489,6 +560,20 @@ function renderMatchDetails(record) {
           <p class="partidas-score-value">${scoreB}</p>
         </div>
       </div>
+
+      ${isEditable ? `
+        <div class="partidas-clock-row">
+          <span class="partidas-clock-label">Tempo</span>
+          <strong
+            class="partidas-clock-value"
+            data-role="match-timer"
+            data-date="${escapeAttr(record.date)}"
+            data-timer-status="${escapeAttr(timerState.status)}"
+            data-timer-elapsed="${escapeAttr(String(timerState.elapsedSeconds || 0))}"
+            data-timer-started-at="${escapeAttr(timerState.startedAt || '')}"
+          >${escapeHtml(timerText)}</strong>
+        </div>
+      ` : ''}
 
       <div class="confirmados-teams partidas-current-teams">
         <div class="confirmados-team-card">
@@ -518,6 +603,7 @@ function renderMatchDetails(record) {
       ${isEditable ? `
         <div class="partidas-details-footer">
           <button type="button" class="btn danger partidas-finalize-btn" data-action="finalize-match" data-date="${escapeAttr(record.date)}">Finalizar</button>
+          <button type="button" class="btn secondary partidas-pause-btn" data-action="toggle-match-timer" data-date="${escapeAttr(record.date)}">${getMatchTimerLabel(record)}</button>
         </div>
       ` : ''}
     </div>
@@ -607,6 +693,38 @@ confirmadosListEl.addEventListener('click', (event) => {
         setStatus('Súmula pronta para compartilhar.');
       } catch (error) {
         setStatus(error.message || 'Nao foi possivel copiar a súmula.', true);
+      }
+    })();
+    return;
+  }
+
+  const toggleTimerButton = event.target.closest('[data-action="toggle-match-timer"]');
+  if (toggleTimerButton) {
+    const date = String(toggleTimerButton.dataset.date || '').trim();
+    const record = getRecordByDate(date);
+    if (!record || String(record.matchStatus || '') !== 'started') {
+      return;
+    }
+
+    const timerState = getMatchTimerState(record);
+    const action = timerState.status === 'running' ? 'pause-match-timer' : 'resume-match-timer';
+
+    event.preventDefault();
+    (async () => {
+      try {
+        await request(buildApiUrl(), {
+          method: 'PUT',
+          body: JSON.stringify({
+            action,
+            date
+          })
+        });
+
+        notifyPartidasUpdate(date, action);
+        await loadRecords();
+        setStatus(action === 'pause-match-timer' ? 'Cronometro pausado.' : 'Cronometro reiniciado.');
+      } catch (error) {
+        setStatus(error.message, true);
       }
     })();
     return;
@@ -828,6 +946,7 @@ function startAutoRefresh() {
 
 loadRecords().then(() => {
   setStatus('Partidas carregadas.');
+  startMatchTimerTicker();
 }).catch((error) => {
   setStatus(error.message, true);
 });

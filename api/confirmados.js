@@ -16,6 +16,74 @@ function normalizeMatchStatus(value) {
   return 'not-started';
 }
 
+function normalizeMatchTimer(rawTimer, matchStatus, fallbackIso) {
+  const source = rawTimer && typeof rawTimer === 'object' ? rawTimer : {};
+  const normalizedStatus = String(source.status || '').trim().toLowerCase();
+  const elapsedSeconds = Math.max(0, Math.floor(Number(source.elapsedSeconds || 0)));
+  const startedAtCandidate = String(source.startedAt || '').trim();
+  const startedAt = startedAtCandidate && !Number.isNaN(Date.parse(startedAtCandidate))
+    ? startedAtCandidate
+    : '';
+  const defaultStartedAt = startedAt || String(fallbackIso || '').trim();
+
+  if (matchStatus === 'started') {
+    if (normalizedStatus === 'paused') {
+      return {
+        status: 'paused',
+        elapsedSeconds,
+        startedAt: ''
+      };
+    }
+
+    return {
+      status: 'running',
+      elapsedSeconds,
+      startedAt: defaultStartedAt || new Date().toISOString()
+    };
+  }
+
+  return {
+    status: 'paused',
+    elapsedSeconds,
+    startedAt: ''
+  };
+}
+
+function getMatchTimerElapsedSeconds(timer, nowIso) {
+  const source = timer && typeof timer === 'object' ? timer : {};
+  const elapsedSeconds = Math.max(0, Math.floor(Number(source.elapsedSeconds || 0)));
+  const status = String(source.status || '').trim().toLowerCase();
+  const startedAt = String(source.startedAt || '').trim();
+
+  if (status !== 'running' || !startedAt) {
+    return elapsedSeconds;
+  }
+
+  const startedAtMs = Date.parse(startedAt);
+  const nowMs = Date.parse(nowIso);
+  if (Number.isNaN(startedAtMs) || Number.isNaN(nowMs)) {
+    return elapsedSeconds;
+  }
+
+  return elapsedSeconds + Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
+}
+
+function pauseMatchTimer(timer, nowIso) {
+  return {
+    status: 'paused',
+    elapsedSeconds: getMatchTimerElapsedSeconds(timer, nowIso),
+    startedAt: ''
+  };
+}
+
+function resumeMatchTimer(timer, nowIso) {
+  return {
+    status: 'running',
+    elapsedSeconds: getMatchTimerElapsedSeconds(timer, nowIso),
+    startedAt: nowIso
+  };
+}
+
 function normalizeTeamName(value, fallback) {
   const normalized = String(value || '')
     .replace(/\s{2,}/g, ' ')
@@ -473,6 +541,7 @@ module.exports = async (req, res) => {
         }
         const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
         const worstByName = normalizeMetricByName(data.worstByName, namesMap);
+        const matchTimer = normalizeMatchTimer(data.matchTimer, normalizeMatchStatus(data.matchStatus), data.updatedAt || data.createdAt || new Date().toISOString());
         const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
         const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
         sendJson(res, 200, {
@@ -488,6 +557,7 @@ module.exports = async (req, res) => {
               teamB,
               scoreA,
               scoreB,
+              matchTimer,
               goalsByName,
               assistsByName,
               goalsByTeamName,
@@ -524,6 +594,7 @@ module.exports = async (req, res) => {
         }
         const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
         const worstByName = normalizeMetricByName(data.worstByName, namesMap);
+        const matchTimer = normalizeMatchTimer(data.matchTimer, normalizeMatchStatus(data.matchStatus), data.updatedAt || data.createdAt || now);
         const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
         const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
         return {
@@ -537,6 +608,7 @@ module.exports = async (req, res) => {
           teamB,
           scoreA,
           scoreB,
+          matchTimer,
           goalsByName,
           assistsByName,
           goalsByTeamName,
@@ -597,6 +669,8 @@ module.exports = async (req, res) => {
       const mvpByName = normalizeMetricByName(currentData.mvpByName, namesMap);
       const worstByName = normalizeMetricByName(currentData.worstByName, namesMap);
       const matchStatus = normalizeMatchStatus(currentData.matchStatus);
+      const existingTimer = normalizeMatchTimer(currentData.matchTimer, matchStatus, currentData.updatedAt || currentData.createdAt || now);
+      const matchTimer = existingTimer;
       const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
       const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
 
@@ -617,6 +691,7 @@ module.exports = async (req, res) => {
           mvpByName,
           worstByName,
           matchStatus,
+          matchTimer,
           events,
           scoreA,
           scoreB,
@@ -658,7 +733,7 @@ module.exports = async (req, res) => {
       const namesMap = mapNamesByKey(names);
       const nameKey = normalizeNameKey(rawName);
       const canonicalName = namesMap.get(nameKey);
-      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'set-match-status', 'toggle-match-status', 'start-match', 'finalize-match']);
+      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'set-match-status', 'toggle-match-status', 'start-match', 'finalize-match', 'pause-match-timer', 'resume-match-timer']);
 
       if (!canonicalName && !actionsWithoutName.has(action)) {
         sendJson(res, 400, { error: 'Atleta nao encontrado na lista de confirmados da data.' });
@@ -694,9 +769,14 @@ module.exports = async (req, res) => {
 
         matchStatus = nextStatus;
 
+        const nextTimer = matchStatus === 'started'
+          ? resumeMatchTimer(matchTimer, now)
+          : pauseMatchTimer(matchTimer, now);
+
         await docRef.set(
           {
             matchStatus,
+            matchTimer: nextTimer,
             updatedAt: now
           },
           { merge: true }
@@ -705,7 +785,8 @@ module.exports = async (req, res) => {
         sendJson(res, 200, {
           ok: true,
           date,
-          matchStatus
+          matchStatus,
+          matchTimer: nextTimer
         });
         return;
       }
@@ -742,6 +823,13 @@ module.exports = async (req, res) => {
         }
 
         matchStatus = 'started';
+        const matchTimer = currentMatchAlreadyStarted
+          ? normalizeMatchTimer(data.matchTimer, matchStatus, data.updatedAt || data.createdAt || now)
+          : {
+              status: 'running',
+              elapsedSeconds: 0,
+              startedAt: now
+            };
 
         await docRef.set(
           {
@@ -750,6 +838,7 @@ module.exports = async (req, res) => {
             teamA: nextTeamA,
             teamB: nextTeamB,
             matchStatus,
+            matchTimer,
             events,
             scoreA,
             scoreB,
@@ -766,6 +855,7 @@ module.exports = async (req, res) => {
           teamNameB: nextTeamNameB,
           teamA: nextTeamA,
           teamB: nextTeamB,
+          matchTimer,
           events,
           scoreA,
           scoreB
@@ -793,6 +883,7 @@ module.exports = async (req, res) => {
             teamA: nextTeamA,
             teamB: nextTeamB,
             matchStatus,
+            matchTimer: pauseMatchTimer(matchTimer, now),
             scoreA,
             scoreB,
             updatedAt: now
@@ -808,8 +899,46 @@ module.exports = async (req, res) => {
           teamNameB: nextTeamNameB,
           teamA: nextTeamA,
           teamB: nextTeamB,
+          matchTimer: pauseMatchTimer(matchTimer, now),
           scoreA,
           scoreB
+        });
+        return;
+      }
+
+      if (action === 'pause-match-timer' || action === 'resume-match-timer') {
+        if (matchStatus !== 'started') {
+          sendJson(res, 400, { error: 'O cronometro so pode ser alterado com a partida iniciada.' });
+          return;
+        }
+
+        const isPausing = action === 'pause-match-timer';
+        if (isPausing && String(matchTimer.status || '') !== 'running') {
+          sendJson(res, 400, { error: 'O cronometro ja esta pausado.' });
+          return;
+        }
+
+        if (!isPausing && String(matchTimer.status || '') === 'running') {
+          sendJson(res, 400, { error: 'O cronometro ja esta em execucao.' });
+          return;
+        }
+
+        const nextTimer = isPausing
+          ? pauseMatchTimer(matchTimer, now)
+          : resumeMatchTimer(matchTimer, now);
+
+        await docRef.set(
+          {
+            matchTimer: nextTimer,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          matchTimer: nextTimer
         });
         return;
       }

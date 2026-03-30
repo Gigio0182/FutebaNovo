@@ -173,6 +173,10 @@ function syncTeamNameInputs() {
   }
 }
 
+function notifyPlayerTeamMove(playerName, fromTeamLabel, toTeamLabel) {
+  setStatus(`${playerName} já estava no ${fromTeamLabel} e foi movido para o ${toTeamLabel}.`);
+}
+
 function renderRosterPanel(teamKey, names, locked = !getIsLoggedIn()) {
   const draft = getSetupDraft();
   const selectedNames = teamKey === 'A' ? draft.teamA : draft.teamB;
@@ -357,22 +361,30 @@ rootEl.addEventListener('change', (event) => {
   if (target.matches('input[data-role="team-a-player"]')) {
     const name = String(target.value || '').trim();
     const key = normalizeNameKey(name);
+    const wasInTeamB = setupDraft.teamB.some((item) => normalizeNameKey(item) === key);
     setupDraft.teamA = target.checked
       ? [...setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key), name]
       : setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key);
     setupDraft.teamB = setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key);
     refreshRosterPanels();
+    if (target.checked && wasInTeamB) {
+      notifyPlayerTeamMove(name, 'Time B', 'Time A');
+    }
     return;
   }
 
   if (target.matches('input[data-role="team-b-player"]')) {
     const name = String(target.value || '').trim();
     const key = normalizeNameKey(name);
+    const wasInTeamA = setupDraft.teamA.some((item) => normalizeNameKey(item) === key);
     setupDraft.teamB = target.checked
       ? [...setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key), name]
       : setupDraft.teamB.filter((item) => normalizeNameKey(item) !== key);
     setupDraft.teamA = setupDraft.teamA.filter((item) => normalizeNameKey(item) !== key);
     refreshRosterPanels();
+    if (target.checked && wasInTeamA) {
+      notifyPlayerTeamMove(name, 'Time A', 'Time B');
+    }
   }
 });
 

@@ -1689,6 +1689,35 @@ textarea {
   border-top: 1px solid #d8e8e2;
   display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.partidas-clock-row {
+  margin: 0.65rem 0 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.75rem;
+  border: 1px solid #d8e8e2;
+  background: #f7fbf9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.partidas-clock-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+  color: #54706c;
+}
+
+.partidas-clock-value {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #0f766e;
+  letter-spacing: 0.35px;
 }
 
 .partidas-details.is-collapsed .partidas-scoreboard,
@@ -1986,6 +2015,23 @@ textarea {
   }
 
   .partidas-list-actions .confirmados-action-btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .partidas-clock-row {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .partidas-clock-value {
+    font-size: 1rem;
+  }
+
+  .partidas-details-footer {
+    justify-content: stretch;
+  }
+
+  .partidas-details-footer .btn {
     flex: 1 1 0;
     min-width: 0;
   }
