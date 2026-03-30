@@ -356,13 +356,14 @@ function renderMatchDetails(record) {
   const teamNameA = String(record.teamNameA || 'Time A').trim() || 'Time A';
   const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
   const isEditable = String(record.matchStatus || '') === 'started';
+  const isFinished = String(record.matchStatus || '') === 'finished';
   const latestEvent = getLatestEvent(record);
   const latestEventId = latestEvent && latestEvent.id ? String(latestEvent.id) : '';
   const scoreA = getTeamScore(record, 'A');
   const scoreB = getTeamScore(record, 'B');
 
   return `
-    <div class="partidas-details">
+    <div class="partidas-details ${isFinished ? 'is-collapsed' : ''}" data-role="match-details" data-date="${escapeAttr(record.date)}">
       <div class="partidas-scoreboard">
         <div class="partidas-score-col">
           <p class="partidas-score-team-label">${escapeHtml(teamNameA)}</p>
@@ -445,7 +446,9 @@ function renderRecords(records) {
             <p class="partidas-date-meta">${confirmadosCount} confirmados <span class="partidas-status-badge ${getMatchStatusClassName(matchStatus)}">${getMatchStatusLabel(matchStatus)}</span></p>
           </div>
           <div class="partidas-list-actions">
-            ${matchStatus === 'finished' ? '' : `<a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>`}
+            ${matchStatus === 'finished'
+              ? `<button type="button" class="confirmados-action-btn" data-action="toggle-match-details" data-date="${escapeAttr(record.date)}">Mostrar detalhes</button>`
+              : `<a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>`}
           </div>
         </div>
         ${matchStatus === 'started' || matchStatus === 'finished' ? renderMatchDetails(record) : ''}
@@ -472,6 +475,20 @@ function notifyPartidasUpdate(date, action) {
 }
 
 confirmadosListEl.addEventListener('click', (event) => {
+  const toggleDetailsButton = event.target.closest('[data-action="toggle-match-details"]');
+  if (toggleDetailsButton) {
+    const date = String(toggleDetailsButton.dataset.date || '').trim();
+    const details = Array.from(confirmadosListEl.querySelectorAll('[data-role="match-details"]'))
+      .find((element) => String(element.dataset.date || '') === date);
+    if (!details) {
+      return;
+    }
+
+    const isCollapsed = details.classList.toggle('is-collapsed');
+    toggleDetailsButton.textContent = isCollapsed ? 'Mostrar detalhes' : 'Ocultar detalhes';
+    return;
+  }
+
   const removeEventButton = event.target.closest('[data-action="remove-last-event"]');
   if (removeEventButton) {
     const date = String(removeEventButton.dataset.date || '').trim();
