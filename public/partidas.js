@@ -4,6 +4,7 @@ const cornerAuthBtn = document.getElementById('corner-auth-btn');
 const GROUP_VALUE = document.body.dataset.group || '';
 const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_futeba_token';
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
+const PARTIDAS_FINALIZE_DRAFT_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_finalize_draft' : 'app_futeba_finalize_draft';
 const AUTO_REFRESH_MS = 3000;
 
 let isLoadingRecords = false;
@@ -12,6 +13,7 @@ let goalDialog = null;
 let goalDialogState = null;
 let openFinishedMatchDetails = new Set();
 let serverClockOffsetMs = 0;
+let finalizeDraftByDate = new Map();
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -226,6 +228,77 @@ function getRecordByDate(date) {
   return recordsCache.find((record) => String(record.date || '') === String(date || '')) || null;
 }
 
+function saveFinalizeDrafts() {
+  try {
+    localStorage.setItem(
+      PARTIDAS_FINALIZE_DRAFT_KEY,
+      JSON.stringify({
+        group: GROUP_VALUE || '',
+        drafts: Object.fromEntries(finalizeDraftByDate)
+      })
+    );
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function loadFinalizeDrafts() {
+  try {
+    const raw = localStorage.getItem(PARTIDAS_FINALIZE_DRAFT_KEY);
+    if (!raw) {
+      return;
+    }
+
+    const payload = JSON.parse(raw);
+    if (String(payload.group || '') !== GROUP_VALUE) {
+      return;
+    }
+
+    const drafts = payload.drafts && typeof payload.drafts === 'object' ? payload.drafts : {};
+    finalizeDraftByDate = new Map(Object.entries(drafts));
+  } catch {
+    finalizeDraftByDate = new Map();
+  }
+}
+
+function getFinalizeDraft(date) {
+  const key = String(date || '');
+  if (!key || !finalizeDraftByDate.has(key)) {
+    return null;
+  }
+
+  const draft = finalizeDraftByDate.get(key);
+  return draft && typeof draft === 'object' ? draft : null;
+}
+
+function setFinalizeDraft(date, nextDraft) {
+  const key = String(date || '');
+  if (!key) {
+    return;
+  }
+
+  if (!nextDraft || (!nextDraft.mvpName && !nextDraft.worstName)) {
+    finalizeDraftByDate.delete(key);
+  } else {
+    finalizeDraftByDate.set(key, {
+      mvpName: String(nextDraft.mvpName || '').trim(),
+      worstName: String(nextDraft.worstName || '').trim()
+    });
+  }
+
+  saveFinalizeDrafts();
+}
+
+function clearFinalizeDraft(date) {
+  const key = String(date || '');
+  if (!key) {
+    return;
+  }
+
+  finalizeDraftByDate.delete(key);
+  saveFinalizeDrafts();
+}
+
 function getTeamPlayers(record, teamKey) {
   const source = teamKey === 'A' ? record.teamA : record.teamB;
   return Array.isArray(source) ? source : [];
@@ -247,6 +320,14 @@ function getFinalizeMetricPlayers(record) {
 }
 
 function getSelectedMetricName(record, metricKey) {
+  const draft = getFinalizeDraft(record && record.date);
+  if (draft) {
+    const draftValue = metricKey === 'worst' ? draft.worstName : draft.mvpName;
+    if (draftValue) {
+      return draftValue;
+    }
+  }
+
   const metricByName = metricKey === 'worst'
     ? record.worstByName
     : record.mvpByName;
@@ -926,6 +1007,7 @@ confirmadosListEl.addEventListener('click', (event) => {
           })
         });
 
+        clearFinalizeDraft(date);
         notifyPartidasUpdate(date, 'finalize-match');
         await loadRecords();
         setStatus('Partida finalizada com sucesso.');
@@ -970,6 +1052,30 @@ confirmadosListEl.addEventListener('click', (event) => {
   }
 
   openGoalDialog(date, teamKey, playerName);
+});
+
+confirmadosListEl.addEventListener('change', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  if (!target.matches('[data-role="finalize-mvp"], [data-role="finalize-worst"]')) {
+    return;
+  }
+
+  const detailsEl = target.closest('.partidas-details');
+  const date = detailsEl ? String(detailsEl.dataset.date || '').trim() : '';
+  if (!date) {
+    return;
+  }
+
+  const mvpSelect = detailsEl.querySelector('[data-role="finalize-mvp"]');
+  const worstSelect = detailsEl.querySelector('[data-role="finalize-worst"]');
+  const mvpName = mvpSelect instanceof HTMLSelectElement ? String(mvpSelect.value || '').trim() : '';
+  const worstName = worstSelect instanceof HTMLSelectElement ? String(worstSelect.value || '').trim() : '';
+
+  setFinalizeDraft(date, { mvpName, worstName });
 });
 
 document.addEventListener('click', (event) => {
@@ -1042,6 +1148,11 @@ async function loadRecords() {
     const data = await request(buildApiUrl());
     syncServerClock(data.serverNow);
     recordsCache = data.records || [];
+    recordsCache.forEach((record) => {
+      if (String(record.matchStatus || '') !== 'started') {
+        clearFinalizeDraft(record.date);
+      }
+    });
     renderRecords(recordsCache);
   } finally {
     isLoadingRecords = false;
@@ -1067,6 +1178,8 @@ function startAutoRefresh() {
     loadRecords().catch(handleAutoRefreshError);
   }, AUTO_REFRESH_MS);
 }
+
+loadFinalizeDrafts();
 
 loadRecords().then(() => {
   setStatus('Partidas carregadas.');
