@@ -760,6 +760,7 @@ module.exports = async (req, res) => {
       const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
       const worstByName = normalizeMetricByName(data.worstByName, namesMap);
       let matchStatus = normalizeMatchStatus(data.matchStatus);
+      let matchTimer = normalizeMatchTimer(data.matchTimer, matchStatus, data.updatedAt || data.createdAt || now);
       let scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
       let scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
 
@@ -824,7 +825,7 @@ module.exports = async (req, res) => {
         }
 
         matchStatus = 'started';
-        const matchTimer = currentMatchAlreadyStarted
+        matchTimer = currentMatchAlreadyStarted
           ? normalizeMatchTimer(data.matchTimer, matchStatus, data.updatedAt || data.createdAt || now)
           : {
               status: 'running',
