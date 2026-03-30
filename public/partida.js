@@ -200,6 +200,7 @@ function notifyPlayerTeamMove(playerName, fromTeamLabel, toTeamLabel) {
 
 function refreshRosterPanels() {
   const names = getConfirmedNames();
+  const rosterLocked = String(recordCache && recordCache.matchStatus || '') === 'finished';
 
   ['A', 'B'].forEach((teamKey) => {
     const panel = rootEl.querySelector(`section[data-role="roster-panel"][data-team="${teamKey}"]`);
@@ -221,7 +222,7 @@ function refreshRosterPanels() {
     }
 
     if (listEl) {
-      listEl.innerHTML = buildRosterOptions(teamKey, names, selectedNames, !getIsLoggedIn());
+      listEl.innerHTML = buildRosterOptions(teamKey, names, selectedNames, rosterLocked);
     }
   });
 }
