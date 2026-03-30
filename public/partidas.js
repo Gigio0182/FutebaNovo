@@ -448,7 +448,6 @@ function renderMatchEvents(record, isEditable = false, latestEventId = '') {
             <span class="partidas-event-icon ${event.ownGoal ? 'is-own-goal' : ''}">⚽</span>
             <span class="partidas-event-player">${escapeHtml(getEventLabel(event))}</span>
           </div>
-          ${event.assistName ? `<p class="partidas-event-assist">assist: ${escapeHtml(event.assistName)}</p>` : ''}
           ${canRemove ? `
             <button
               type="button"
@@ -633,11 +632,13 @@ function renderMatchDetails(record) {
 
       <div class="confirmados-teams partidas-current-teams">
         <div class="confirmados-team-card">
+          <h4>${escapeHtml(teamNameA)}</h4>
           <ul class="confirmados-team-list">
             ${renderTeamPlayers(record, 'A', isEditable)}
           </ul>
         </div>
         <div class="confirmados-team-card">
+          <h4>${escapeHtml(teamNameB)}</h4>
           <ul class="confirmados-team-list">
             ${renderTeamPlayers(record, 'B', isEditable)}
           </ul>
