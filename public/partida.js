@@ -159,24 +159,6 @@ function getSetupDraft() {
   return setupDraft;
 }
 
-function syncTeamNameInputs() {
-  const draft = getSetupDraft();
-  const teamNameAInput = document.getElementById('team-name-a');
-  const teamNameBInput = document.getElementById('team-name-b');
-
-  if (teamNameAInput) {
-    draft.teamNameA = String(teamNameAInput.value || '').trim() || 'Time A';
-  }
-
-  if (teamNameBInput) {
-    draft.teamNameB = String(teamNameBInput.value || '').trim() || 'Time B';
-  }
-}
-
-function notifyPlayerTeamMove(playerName, fromTeamLabel, toTeamLabel) {
-  setStatus(`${playerName} já estava no ${fromTeamLabel} e foi movido para o ${toTeamLabel}.`);
-}
-
 function renderRosterPanel(teamKey, names, locked = !getIsLoggedIn()) {
   const draft = getSetupDraft();
   const selectedNames = teamKey === 'A' ? draft.teamA : draft.teamB;
@@ -196,6 +178,24 @@ function renderRosterPanel(teamKey, names, locked = !getIsLoggedIn()) {
       </div>
     </section>
   `;
+}
+
+function syncTeamNameInputs() {
+  const draft = getSetupDraft();
+  const teamNameAInput = document.getElementById('team-name-a');
+  const teamNameBInput = document.getElementById('team-name-b');
+
+  if (teamNameAInput) {
+    draft.teamNameA = String(teamNameAInput.value || '').trim() || 'Time A';
+  }
+
+  if (teamNameBInput) {
+    draft.teamNameB = String(teamNameBInput.value || '').trim() || 'Time B';
+  }
+}
+
+function notifyPlayerTeamMove(playerName, fromTeamLabel, toTeamLabel) {
+  setStatus(`${playerName} já estava no ${fromTeamLabel} e foi movido para o ${toTeamLabel}.`);
 }
 
 function refreshRosterPanels() {
@@ -232,8 +232,8 @@ function renderSetupForm(record) {
   const matchStatus = String(record.matchStatus || 'not-started');
   const submitLabel = matchStatus === 'started' ? 'Salvar alterações' : 'Iniciar partida';
   const submitAction = 'start-match';
-  const locked = !getIsLoggedIn() || matchStatus === 'finished';
-  const canSubmit = !locked && matchStatus !== 'finished';
+  const locked = matchStatus === 'finished';
+  const canSubmit = matchStatus !== 'finished';
 
   return `
     <form id="match-setup-form" class="partidas-setup-panel" autocomplete="off">
@@ -260,9 +260,7 @@ function renderSetupForm(record) {
             <button class="btn secondary" type="button" data-action="go-back">Voltar</button>
             <button class="btn" type="submit" data-submit-action="${submitAction}">${submitLabel}</button>
           `
-          : matchStatus === 'finished'
-            ? '<span class="partidas-status-helper">Partida finalizada.</span>'
-            : '<span class="partidas-status-helper">Faca login no cadastro para salvar a partida.</span>'}
+          : '<span class="partidas-status-helper">Partida finalizada. Nao e possivel editar.</span>'}
       </div>
     </form>
   `;
@@ -396,10 +394,6 @@ rootEl.addEventListener('submit', async (event) => {
 
   event.preventDefault();
 
-  if (!getIsLoggedIn()) {
-    setStatus('Faca login no cadastro para salvar a partida.', true);
-    return;
-  }
 
   syncTeamNameInputs();
 
