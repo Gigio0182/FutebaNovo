@@ -222,7 +222,15 @@ function refreshRosterPanels() {
     }
 
     if (listEl) {
-      listEl.innerHTML = buildRosterOptions(teamKey, names, selectedNames, rosterLocked);
+      const checkedKeys = new Set(selectedNames.map((name) => normalizeNameKey(name)));
+      const inputs = listEl.querySelectorAll(`input[data-role="${teamKey === 'A' ? 'team-a-player' : 'team-b-player'}"]`);
+
+      inputs.forEach((input) => {
+        const name = String(input.value || '').trim();
+        const key = normalizeNameKey(name);
+        input.checked = checkedKeys.has(key);
+        input.disabled = rosterLocked;
+      });
     }
   });
 }
