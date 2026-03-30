@@ -95,6 +95,84 @@
   box-shadow: 0 22px 40px rgba(31, 42, 44, 0.24);
 }
 
+.partidas-goal-dialog {
+  width: min(520px, calc(100vw - 2rem));
+}
+
+.partidas-goal-content {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.partidas-goal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.partidas-goal-header h2 {
+  margin: 0;
+}
+
+.partidas-goal-close {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: #edf7f3;
+  color: #115e59;
+  font-size: 1.35rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.partidas-goal-meta {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.75rem;
+  background: #f1f8f5;
+  border: 1px solid #d8e8e2;
+}
+
+.partidas-goal-label {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #3b6460;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.partidas-goal-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #d8e8e2;
+  border-radius: 0.72rem;
+  background: #fff;
+  color: #184944;
+  font-weight: 800;
+}
+
+.partidas-goal-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #0f766e;
+}
+
+.partidas-goal-note {
+  margin: 0;
+  color: #4d6f69;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.partidas-goal-submit {
+  width: 100%;
+}
+
 .help-dialog-content h2 {
   margin: 0;
   font-size: 1.35rem;
@@ -748,6 +826,12 @@ textarea {
   cursor: pointer;
   font-weight: 700;
   font-size: 0.85rem;
+}
+
+.partidas-goal-btn {
+  min-width: 3.2rem;
+  padding: 0.34rem 0.55rem;
+  background: #0f766e;
 }
 
 .confirmados-action-btn.danger {
@@ -1540,6 +1624,25 @@ textarea {
 .partidas-current-teams .confirmados-team-list li {
   padding: 0.34rem 0.46rem;
   margin-bottom: 0.26rem;
+}
+
+.partidas-team-events {
+  margin-top: 0.6rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed #d4e4de;
+}
+
+.partidas-team-events-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  color: #54706c;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+  font-weight: 800;
+}
+
+.partidas-player-row {
+  width: 100%;
 }
 
 .partidas-events-list {

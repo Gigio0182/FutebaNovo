@@ -8,6 +8,8 @@ const AUTO_REFRESH_MS = 3000;
 
 let isLoadingRecords = false;
 let recordsCache = [];
+let goalDialog = null;
+let goalDialogState = null;
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -49,6 +51,22 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeAttr(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
+function normalizeNameKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function formatDate(dateText) {
   const [year, month, day] = String(dateText || '').split('-').map(Number);
   if (!year || !month || !day) {
@@ -86,10 +104,24 @@ function getActionLabel(status) {
   return status === 'started' ? 'Abrir partida' : 'Iniciar';
 }
 
+function getRecordByDate(date) {
+  return recordsCache.find((record) => String(record.date || '') === String(date || '')) || null;
+}
+
+function getTeamPlayers(record, teamKey) {
+  const source = teamKey === 'A' ? record.teamA : record.teamB;
+  return Array.isArray(source) ? source : [];
+}
+
 function getTeamScore(record, teamKey) {
   const directValue = Number(teamKey === 'A' ? record.scoreA : record.scoreB);
   if (!Number.isNaN(directValue)) {
     return directValue;
+  }
+
+  const events = Array.isArray(record.events) ? record.events : [];
+  if (events.length) {
+    return events.filter((event) => event && event.scoringTeam === teamKey).length;
   }
 
   const goalsByTeamName = record.goalsByTeamName && typeof record.goalsByTeamName === 'object'
@@ -102,15 +134,183 @@ function getTeamScore(record, teamKey) {
   return Object.values(teamGoals).reduce((total, value) => total + Number(value || 0), 0);
 }
 
-function renderTeamPlayers(names) {
-  return (Array.isArray(names) ? names : [])
-    .map((name) => `<li><span>${escapeHtml(name)}</span></li>`)
-    .join('') || '<li><span>Sem atletas</span></li>';
+function getEventLabel(event) {
+  if (!event || typeof event !== 'object') {
+    return 'Gol';
+  }
+
+  if (event.ownGoal) {
+    return `Gol contra de ${String(event.playerName || '')}`;
+  }
+
+  if (event.assistName) {
+    return `Gol de ${String(event.playerName || '')} | Assistência: ${String(event.assistName || '')}`;
+  }
+
+  return `Gol de ${String(event.playerName || '')}`;
+}
+
+function renderTeamPlayers(record, teamKey) {
+  const names = getTeamPlayers(record, teamKey);
+
+  return names.map((name) => `
+      <li class="partidas-player-row">
+        <span class="partidas-player-name">${escapeHtml(name)}</span>
+        <button
+          type="button"
+          class="confirmados-action-btn partidas-goal-btn"
+          data-action="open-goal-dialog"
+          data-date="${escapeAttr(record.date)}"
+          data-team="${teamKey}"
+          data-name="${escapeAttr(name)}"
+        >
+          GOL
+        </button>
+      </li>
+    `).join('') || '<li><span>Sem atletas</span></li>';
+}
+
+function renderTeamEvents(record, teamKey) {
+  const events = Array.isArray(record.events) ? record.events : [];
+  const teamEvents = events.filter((event) => event && event.scoringTeam === teamKey);
+
+  if (!teamEvents.length) {
+    return '<li class="partidas-event-empty">Nenhum evento registrado.</li>';
+  }
+
+  return teamEvents.map((event) => `
+      <li class="partidas-event-row">
+        <span class="partidas-event-icon">⚽</span>
+        <span class="partidas-event-player">${escapeHtml(getEventLabel(event))}</span>
+      </li>
+    `).join('');
+}
+
+function renderGoalDialogOptions(record, teamKey, playerName) {
+  const teammates = getTeamPlayers(record, teamKey)
+    .filter((name) => normalizeNameKey(name) !== normalizeNameKey(playerName));
+
+  return [`<option value="">(nenhuma)</option>`]
+    .concat(teammates.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`))
+    .join('');
+}
+
+function ensureGoalDialog() {
+  if (goalDialog) {
+    return goalDialog;
+  }
+
+  const existing = document.getElementById('goal-dialog');
+  if (existing) {
+    goalDialog = existing;
+    return goalDialog;
+  }
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <dialog id="goal-dialog" class="help-dialog partidas-goal-dialog">
+      <form id="goal-dialog-form" class="help-dialog-content partidas-goal-content">
+        <div class="partidas-goal-header">
+          <div>
+            <h2>Registrar Gol</h2>
+            <p class="help-dialog-subtitle">Preencha os dados do lance antes de confirmar.</p>
+          </div>
+          <button class="partidas-goal-close" type="button" data-action="close-goal-dialog" aria-label="Fechar">&times;</button>
+        </div>
+
+        <div class="partidas-goal-meta">
+          <span class="partidas-goal-label">Autor</span>
+          <strong data-role="goal-author"></strong>
+        </div>
+
+        <label class="partidas-goal-toggle">
+          <input type="checkbox" data-role="goal-own-goal" />
+          <span>Gol contra</span>
+        </label>
+
+        <label class="confirmados-field">
+          Assistência
+          <select data-role="goal-assist"></select>
+        </label>
+
+        <p class="partidas-goal-note" data-role="goal-note">Selecione um atleta do mesmo time para a assistência.</p>
+
+        <button class="btn partidas-goal-submit" type="submit">Registrar Gol</button>
+      </form>
+    </dialog>
+  `);
+
+  goalDialog = document.getElementById('goal-dialog');
+  return goalDialog;
+}
+
+function closeGoalDialog() {
+  if (goalDialog && typeof goalDialog.close === 'function' && goalDialog.open) {
+    goalDialog.close();
+  }
+
+  goalDialogState = null;
+}
+
+function syncGoalDialogFields() {
+  if (!goalDialog || !goalDialogState) {
+    return;
+  }
+
+  const ownGoalInput = goalDialog.querySelector('[data-role="goal-own-goal"]');
+  const assistSelect = goalDialog.querySelector('[data-role="goal-assist"]');
+  const noteEl = goalDialog.querySelector('[data-role="goal-note"]');
+
+  if (!(ownGoalInput instanceof HTMLInputElement) || !(assistSelect instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  const ownGoal = Boolean(ownGoalInput.checked);
+  assistSelect.disabled = ownGoal;
+  if (ownGoal) {
+    assistSelect.value = '';
+  }
+
+  if (noteEl) {
+    noteEl.textContent = ownGoal
+      ? 'Gol contra selecionado. A assistência fica desativada.'
+      : 'Selecione um atleta do mesmo time para a assistência.';
+  }
+}
+
+function openGoalDialog(date, teamKey, playerName) {
+  const record = getRecordByDate(date);
+  if (!record) {
+    return;
+  }
+
+  ensureGoalDialog();
+  goalDialogState = { date, teamKey, playerName };
+
+  const authorEl = goalDialog.querySelector('[data-role="goal-author"]');
+  const ownGoalInput = goalDialog.querySelector('[data-role="goal-own-goal"]');
+  const assistSelect = goalDialog.querySelector('[data-role="goal-assist"]');
+
+  if (authorEl) {
+    authorEl.textContent = playerName;
+  }
+
+  if (ownGoalInput instanceof HTMLInputElement) {
+    ownGoalInput.checked = false;
+  }
+
+  if (assistSelect instanceof HTMLSelectElement) {
+    assistSelect.innerHTML = renderGoalDialogOptions(record, teamKey, playerName);
+    assistSelect.value = '';
+  }
+
+  syncGoalDialogFields();
+
+  if (typeof goalDialog.showModal === 'function') {
+    goalDialog.showModal();
+  }
 }
 
 function renderStartedMatchDetails(record) {
-  const teamA = Array.isArray(record.teamA) ? record.teamA : [];
-  const teamB = Array.isArray(record.teamB) ? record.teamB : [];
   const teamNameA = String(record.teamNameA || 'Time A').trim() || 'Time A';
   const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
   const scoreA = getTeamScore(record, 'A');
@@ -133,13 +333,25 @@ function renderStartedMatchDetails(record) {
       <div class="confirmados-teams partidas-current-teams">
         <div class="confirmados-team-card">
           <ul class="confirmados-team-list">
-            ${renderTeamPlayers(teamA)}
+            ${renderTeamPlayers(record, 'A')}
           </ul>
+          <div class="partidas-team-events">
+            <p class="partidas-team-events-title">Eventos</p>
+            <ul class="partidas-events-list">
+              ${renderTeamEvents(record, 'A')}
+            </ul>
+          </div>
         </div>
         <div class="confirmados-team-card">
           <ul class="confirmados-team-list">
-            ${renderTeamPlayers(teamB)}
+            ${renderTeamPlayers(record, 'B')}
           </ul>
+          <div class="partidas-team-events">
+            <p class="partidas-team-events-title">Eventos</p>
+            <ul class="partidas-events-list">
+              ${renderTeamEvents(record, 'B')}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -189,6 +401,98 @@ function renderRecords(records) {
     })
     .join('');
 }
+
+function notifyPartidasUpdate(date, action) {
+  try {
+    localStorage.setItem(
+      PARTIDAS_UPDATE_KEY,
+      JSON.stringify({
+        ts: Date.now(),
+        group: GROUP_VALUE || '',
+        date: String(date || ''),
+        action: String(action || '')
+      })
+    );
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+confirmadosListEl.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-action="open-goal-dialog"]');
+  if (!button) {
+    return;
+  }
+
+  const date = String(button.dataset.date || '').trim();
+  const teamKey = String(button.dataset.team || '').trim().toUpperCase();
+  const playerName = String(button.dataset.name || '').trim();
+  if (!date || !playerName || (teamKey !== 'A' && teamKey !== 'B')) {
+    return;
+  }
+
+  openGoalDialog(date, teamKey, playerName);
+});
+
+document.addEventListener('click', (event) => {
+  if (event.target instanceof HTMLElement && event.target.closest('[data-action="close-goal-dialog"]')) {
+    closeGoalDialog();
+    return;
+  }
+
+  if (goalDialog && event.target === goalDialog) {
+    closeGoalDialog();
+  }
+});
+
+document.addEventListener('change', (event) => {
+  if (!goalDialog || !goalDialogState) {
+    return;
+  }
+
+  if (event.target instanceof HTMLInputElement && event.target.matches('[data-role="goal-own-goal"]')) {
+    syncGoalDialogFields();
+  }
+});
+
+document.addEventListener('submit', async (event) => {
+  if (!goalDialog || !goalDialogState) {
+    return;
+  }
+
+  const form = event.target.closest('#goal-dialog-form');
+  if (!form) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const ownGoalInput = goalDialog.querySelector('[data-role="goal-own-goal"]');
+  const assistSelect = goalDialog.querySelector('[data-role="goal-assist"]');
+  const ownGoal = Boolean(ownGoalInput instanceof HTMLInputElement && ownGoalInput.checked);
+  const assistName = ownGoal || !(assistSelect instanceof HTMLSelectElement) ? '' : String(assistSelect.value || '').trim();
+
+  try {
+    await request(buildApiUrl(), {
+      method: 'PUT',
+      body: JSON.stringify({
+        action: 'add-goal',
+        date: goalDialogState.date,
+        name: goalDialogState.playerName,
+        team: goalDialogState.teamKey,
+        ownGoal,
+        assistName
+      })
+    });
+
+    notifyPartidasUpdate(goalDialogState.date, 'add-goal');
+    closeGoalDialog();
+    await loadRecords();
+    setStatus('Gol registrado com sucesso.');
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+});
 
 async function loadRecords() {
   if (isLoadingRecords) {

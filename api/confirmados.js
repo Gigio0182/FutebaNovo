@@ -187,6 +187,104 @@ function buildStatsByTeamFromMembership(namesMap, teamA, teamB, statsByName) {
   return fallback;
 }
 
+function normalizeEvents(rawEvents, namesMap) {
+  const source = Array.isArray(rawEvents) ? rawEvents : [];
+  const normalized = [];
+
+  source.forEach((event, index) => {
+    if (!event || typeof event !== 'object') {
+      return;
+    }
+
+    const playerName = String(event.playerName || event.name || event.scorer || '').trim();
+    const playerKey = normalizeNameKey(playerName);
+    const scoringTeam = String(event.scoringTeam || '').trim().toUpperCase();
+    const playerTeam = String(event.playerTeam || '').trim().toUpperCase();
+    const assistName = String(event.assistName || event.assist || '').trim();
+    const assistKey = normalizeNameKey(assistName);
+
+    if (!playerKey || !namesMap.has(playerKey) || (scoringTeam !== 'A' && scoringTeam !== 'B')) {
+      return;
+    }
+
+    normalized.push({
+      id: String(event.id || `${playerKey}-${scoringTeam}-${assistKey || 'na'}-${String(event.createdAt || index)}`),
+      type: 'goal',
+      playerName: namesMap.get(playerKey),
+      playerKey,
+      playerTeam: playerTeam === 'A' || playerTeam === 'B' ? playerTeam : '',
+      scoringTeam,
+      assistName: assistKey && namesMap.has(assistKey) ? namesMap.get(assistKey) : '',
+      assistKey: assistKey && namesMap.has(assistKey) ? assistKey : '',
+      ownGoal: Boolean(event.ownGoal),
+      createdAt: String(event.createdAt || event.updatedAt || '')
+    });
+  });
+
+  return normalized;
+}
+
+function calculateTeamScoreFromEvents(events, teamKey, fallbackStatsByTeam) {
+  const sourceEvents = Array.isArray(events) ? events : [];
+  if (sourceEvents.length) {
+    return sourceEvents.reduce((total, event) => total + (event && event.scoringTeam === teamKey ? 1 : 0), 0);
+  }
+
+  return calculateTeamScore(fallbackStatsByTeam, teamKey);
+}
+
+function buildGoalStatsFromEvents(namesMap, events) {
+  const statsByName = {};
+  const statsByTeam = { A: {}, B: {} };
+
+  (Array.isArray(events) ? events : []).forEach((event) => {
+    if (!event || event.ownGoal || event.type !== 'goal') {
+      return;
+    }
+
+    const playerKey = normalizeNameKey(event.playerName);
+    if (!playerKey || !namesMap.has(playerKey)) {
+      return;
+    }
+
+    const scoringTeam = event.scoringTeam === 'A' || event.scoringTeam === 'B' ? event.scoringTeam : '';
+    if (!scoringTeam) {
+      return;
+    }
+
+    statsByName[playerKey] = Number(statsByName[playerKey] || 0) + 1;
+    statsByTeam[scoringTeam][playerKey] = Number(statsByTeam[scoringTeam][playerKey] || 0) + 1;
+  });
+
+  return { statsByName, statsByTeam };
+}
+
+function buildAssistStatsFromEvents(namesMap, events) {
+  const statsByName = {};
+  const statsByTeam = { A: {}, B: {} };
+
+  (Array.isArray(events) ? events : []).forEach((event) => {
+    if (!event || event.ownGoal || event.type !== 'goal' || !event.assistName) {
+      return;
+    }
+
+    const assistKey = normalizeNameKey(event.assistName);
+    if (!assistKey || !namesMap.has(assistKey)) {
+      return;
+    }
+
+    const assistTeam = event.playerTeam === 'A' || event.playerTeam === 'B' ? event.playerTeam : event.scoringTeam;
+    if (assistTeam !== 'A' && assistTeam !== 'B') {
+      return;
+    }
+
+    statsByName[assistKey] = Number(statsByName[assistKey] || 0) + 1;
+    statsByTeam[assistTeam][assistKey] = Number(statsByTeam[assistTeam][assistKey] || 0) + 1;
+  });
+
+  return { statsByName, statsByTeam };
+}
+
 function calculateTeamScore(statsByTeam, teamKey) {
   const source = statsByTeam && typeof statsByTeam === 'object' ? statsByTeam : {};
   const teamStats = source[teamKey] && typeof source[teamKey] === 'object' ? source[teamKey] : {};
@@ -356,18 +454,23 @@ module.exports = async (req, res) => {
         const namesMap = mapNamesByKey(names);
         const teamA = normalizeTeams(data.teamA, namesMap);
         const teamB = normalizeTeams(data.teamB, namesMap);
-        const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
-        const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
-        let goalsByTeamName = normalizeStatsByTeam(data.goalsByTeamName, namesMap);
-        let assistsByTeamName = normalizeStatsByTeam(data.assistsByTeamName, namesMap);
-        if (!Object.keys(goalsByTeamName.A).length && !Object.keys(goalsByTeamName.B).length) {
+        const events = normalizeEvents(data.events, namesMap);
+        const eventGoalStats = buildGoalStatsFromEvents(namesMap, events);
+        const eventAssistStats = buildAssistStatsFromEvents(namesMap, events);
+        const goalsByName = events.length ? eventGoalStats.statsByName : normalizeGoalsByName(data.goalsByName, namesMap);
+        const assistsByName = events.length ? eventAssistStats.statsByName : normalizeAssistsByName(data.assistsByName, namesMap);
+        let goalsByTeamName = events.length ? eventGoalStats.statsByTeam : normalizeStatsByTeam(data.goalsByTeamName, namesMap);
+        let assistsByTeamName = events.length ? eventAssistStats.statsByTeam : normalizeStatsByTeam(data.assistsByTeamName, namesMap);
+        if (!events.length && !Object.keys(goalsByTeamName.A).length && !Object.keys(goalsByTeamName.B).length) {
           goalsByTeamName = buildStatsByTeamFromMembership(namesMap, teamA, teamB, goalsByName);
         }
-        if (!Object.keys(assistsByTeamName.A).length && !Object.keys(assistsByTeamName.B).length) {
+        if (!events.length && !Object.keys(assistsByTeamName.A).length && !Object.keys(assistsByTeamName.B).length) {
           assistsByTeamName = buildStatsByTeamFromMembership(namesMap, teamA, teamB, assistsByName);
         }
         const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
         const worstByName = normalizeMetricByName(data.worstByName, namesMap);
+        const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
+        const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
         sendJson(res, 200, {
           records: [
             {
@@ -379,12 +482,13 @@ module.exports = async (req, res) => {
               teamNameB: normalizeTeamName(data.teamNameB, 'Time B'),
               teamA,
               teamB,
-              scoreA: calculateTeamScore(goalsByTeamName, 'A'),
-              scoreB: calculateTeamScore(goalsByTeamName, 'B'),
+              scoreA,
+              scoreB,
               goalsByName,
               assistsByName,
               goalsByTeamName,
               assistsByTeamName,
+              events,
               mvpByName,
               worstByName,
               updatedAt: data.updatedAt || null
@@ -401,18 +505,23 @@ module.exports = async (req, res) => {
         const namesMap = mapNamesByKey(names);
         const teamA = normalizeTeams(data.teamA, namesMap);
         const teamB = normalizeTeams(data.teamB, namesMap);
-        const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
-        const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
-        let goalsByTeamName = normalizeStatsByTeam(data.goalsByTeamName, namesMap);
-        let assistsByTeamName = normalizeStatsByTeam(data.assistsByTeamName, namesMap);
-        if (!Object.keys(goalsByTeamName.A).length && !Object.keys(goalsByTeamName.B).length) {
+        const events = normalizeEvents(data.events, namesMap);
+        const eventGoalStats = buildGoalStatsFromEvents(namesMap, events);
+        const eventAssistStats = buildAssistStatsFromEvents(namesMap, events);
+        const goalsByName = events.length ? eventGoalStats.statsByName : normalizeGoalsByName(data.goalsByName, namesMap);
+        const assistsByName = events.length ? eventAssistStats.statsByName : normalizeAssistsByName(data.assistsByName, namesMap);
+        let goalsByTeamName = events.length ? eventGoalStats.statsByTeam : normalizeStatsByTeam(data.goalsByTeamName, namesMap);
+        let assistsByTeamName = events.length ? eventAssistStats.statsByTeam : normalizeStatsByTeam(data.assistsByTeamName, namesMap);
+        if (!events.length && !Object.keys(goalsByTeamName.A).length && !Object.keys(goalsByTeamName.B).length) {
           goalsByTeamName = buildStatsByTeamFromMembership(namesMap, teamA, teamB, goalsByName);
         }
-        if (!Object.keys(assistsByTeamName.A).length && !Object.keys(assistsByTeamName.B).length) {
+        if (!events.length && !Object.keys(assistsByTeamName.A).length && !Object.keys(assistsByTeamName.B).length) {
           assistsByTeamName = buildStatsByTeamFromMembership(namesMap, teamA, teamB, assistsByName);
         }
         const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
         const worstByName = normalizeMetricByName(data.worstByName, namesMap);
+        const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
+        const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
         return {
           date: data.date || doc.id,
           names,
@@ -422,12 +531,13 @@ module.exports = async (req, res) => {
           teamNameB: normalizeTeamName(data.teamNameB, 'Time B'),
           teamA,
           teamB,
-          scoreA: calculateTeamScore(goalsByTeamName, 'A'),
-          scoreB: calculateTeamScore(goalsByTeamName, 'B'),
+          scoreA,
+          scoreB,
           goalsByName,
           assistsByName,
           goalsByTeamName,
           assistsByTeamName,
+          events,
           mvpByName,
           worstByName,
           updatedAt: data.updatedAt || null
@@ -469,6 +579,7 @@ module.exports = async (req, res) => {
       const teamNameB = normalizeTeamName(currentData.teamNameB, 'Time B');
       const teamA = normalizeTeams(currentData.teamA, namesMap);
       const teamB = normalizeTeams(currentData.teamB, namesMap);
+      const events = normalizeEvents(currentData.events, namesMap);
       const goalsByName = normalizeGoalsByName(currentData.goalsByName, namesMap);
       const assistsByName = normalizeAssistsByName(currentData.assistsByName, namesMap);
       let goalsByTeamName = normalizeStatsByTeam(currentData.goalsByTeamName, namesMap);
@@ -482,8 +593,8 @@ module.exports = async (req, res) => {
       const mvpByName = normalizeMetricByName(currentData.mvpByName, namesMap);
       const worstByName = normalizeMetricByName(currentData.worstByName, namesMap);
       const matchStatus = normalizeMatchStatus(currentData.matchStatus);
-      const scoreA = calculateTeamScore(goalsByTeamName, 'A');
-      const scoreB = calculateTeamScore(goalsByTeamName, 'B');
+      const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
+      const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
 
       await syncAthletesGames(db, req, previousNames, names, now);
 
@@ -502,6 +613,7 @@ module.exports = async (req, res) => {
           mvpByName,
           worstByName,
           matchStatus,
+          events,
           scoreA,
           scoreB,
           createdAt: current.exists ? current.data().createdAt || now : now,
@@ -554,6 +666,7 @@ module.exports = async (req, res) => {
       const teamNameB = normalizeTeamName(data.teamNameB, 'Time B');
       const teamA = normalizeTeams(data.teamA, namesMap);
       const teamB = normalizeTeams(data.teamB, namesMap);
+      const events = normalizeEvents(data.events, namesMap);
       const goalsByName = normalizeGoalsByName(data.goalsByName, namesMap);
       const assistsByName = normalizeAssistsByName(data.assistsByName, namesMap);
       let goalsByTeamName = normalizeStatsByTeam(data.goalsByTeamName, namesMap);
@@ -567,8 +680,8 @@ module.exports = async (req, res) => {
       const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
       const worstByName = normalizeMetricByName(data.worstByName, namesMap);
       let matchStatus = normalizeMatchStatus(data.matchStatus);
-      let scoreA = calculateTeamScore(goalsByTeamName, 'A');
-      let scoreB = calculateTeamScore(goalsByTeamName, 'B');
+      let scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
+      let scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
 
       if (action === 'set-match-status' || action === 'toggle-match-status') {
         const nextStatus = action === 'toggle-match-status'
@@ -625,6 +738,9 @@ module.exports = async (req, res) => {
             teamA: nextTeamA,
             teamB: nextTeamB,
             matchStatus,
+            events,
+            scoreA,
+            scoreB,
             updatedAt: now
           },
           { merge: true }
@@ -637,7 +753,10 @@ module.exports = async (req, res) => {
           teamNameA: nextTeamNameA,
           teamNameB: nextTeamNameB,
           teamA: nextTeamA,
-          teamB: nextTeamB
+          teamB: nextTeamB,
+          events,
+          scoreA,
+          scoreB
         });
         return;
       }
@@ -705,6 +824,10 @@ module.exports = async (req, res) => {
       if (action === 'add-goal') {
         const key = normalizeNameKey(canonicalName);
         const targetTeam = String(body.team || '').trim().toUpperCase();
+        const ownGoal = Boolean(body.ownGoal);
+        const rawAssistName = String(body.assistName || '').trim();
+        const assistKey = normalizeNameKey(rawAssistName);
+        const assistCanonical = assistKey ? namesMap.get(assistKey) : '';
         const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
         const inTeamB = teamB.some((name) => normalizeNameKey(name) === key);
 
@@ -713,26 +836,69 @@ module.exports = async (req, res) => {
           return;
         }
 
-        let scoringTeam = '';
+        let playerTeam = '';
         if (targetTeam === 'A' || targetTeam === 'B') {
           if ((targetTeam === 'A' && !inTeamA) || (targetTeam === 'B' && !inTeamB)) {
             sendJson(res, 400, { error: 'Atleta nao pertence ao time informado para registrar gol.' });
             return;
           }
-          scoringTeam = targetTeam;
+          playerTeam = targetTeam;
         } else if (inTeamA && !inTeamB) {
-          scoringTeam = 'A';
+          playerTeam = 'A';
         } else if (inTeamB && !inTeamA) {
-          scoringTeam = 'B';
+          playerTeam = 'B';
         } else {
           sendJson(res, 400, { error: 'Atleta esta nos dois times. Informe o time do gol.' });
           return;
         }
 
-        goalsByName[key] = Number(goalsByName[key] || 0) + 1;
-        goalsByTeamName[scoringTeam][key] = Number(goalsByTeamName[scoringTeam][key] || 0) + 1;
-        scoreA = calculateTeamScore(goalsByTeamName, 'A');
-        scoreB = calculateTeamScore(goalsByTeamName, 'B');
+        const scoringTeam = ownGoal
+          ? (playerTeam === 'A' ? 'B' : 'A')
+          : playerTeam;
+
+        if (scoringTeam !== 'A' && scoringTeam !== 'B') {
+          sendJson(res, 400, { error: 'Nao foi possivel identificar o time do gol.' });
+          return;
+        }
+
+        if (!ownGoal) {
+          if (assistCanonical) {
+            const assistKeyTeam = teamA.some((name) => normalizeNameKey(name) === assistKey)
+              ? 'A'
+              : teamB.some((name) => normalizeNameKey(name) === assistKey)
+                ? 'B'
+                : '';
+
+            if (!assistKeyTeam || assistKeyTeam !== scoringTeam) {
+              sendJson(res, 400, { error: 'A assistencia deve ser de um atleta do mesmo time.' });
+              return;
+            }
+          }
+
+          goalsByName[key] = Number(goalsByName[key] || 0) + 1;
+          goalsByTeamName[scoringTeam][key] = Number(goalsByTeamName[scoringTeam][key] || 0) + 1;
+
+          if (assistCanonical) {
+            assistsByName[assistKey] = Number(assistsByName[assistKey] || 0) + 1;
+            assistsByTeamName[scoringTeam][assistKey] = Number(assistsByTeamName[scoringTeam][assistKey] || 0) + 1;
+            await incrementAthleteMetric(db, req, assistCanonical, 'assists', 1, now);
+          }
+        }
+
+        const event = {
+          id: `${now}-${events.length + 1}`,
+          type: 'goal',
+          playerName: canonicalName,
+          playerTeam,
+          scoringTeam,
+          assistName: ownGoal ? '' : assistCanonical,
+          ownGoal,
+          createdAt: now
+        };
+
+        events.push(event);
+        scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
+        scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
 
         await docRef.set(
           {
@@ -740,6 +906,9 @@ module.exports = async (req, res) => {
             goalsByTeamName,
             scoreA,
             scoreB,
+            assistsByName,
+            assistsByTeamName,
+            events,
             updatedAt: now
           },
           { merge: true }
@@ -751,11 +920,14 @@ module.exports = async (req, res) => {
           ok: true,
           date,
           name: canonicalName,
-          goals: goalsByName[key],
+          goals: goalsByName[key] || 0,
           scoreA,
           scoreB,
           goalsByName,
-          goalsByTeamName
+          goalsByTeamName,
+          assistsByName,
+          assistsByTeamName,
+          events
         });
         return;
       }
@@ -763,6 +935,7 @@ module.exports = async (req, res) => {
       if (action === 'remove-goal') {
         const key = normalizeNameKey(canonicalName);
         const targetTeam = String(body.team || '').trim().toUpperCase();
+        const ownGoal = Boolean(body.ownGoal);
         const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
         const inTeamB = teamB.some((name) => normalizeNameKey(name) === key);
 
@@ -787,27 +960,67 @@ module.exports = async (req, res) => {
           return;
         }
 
-        const currentGoals = Number(goalsByName[key] || 0);
-        if (currentGoals <= 0) {
+        const eventIndex = [...events].reverse().findIndex((event) => {
+          if (!event || event.type !== 'goal' || normalizeNameKey(event.playerName) !== key) {
+            return false;
+          }
+
+          if (ownGoal && !event.ownGoal) {
+            return false;
+          }
+
+          if (targetTeam && event.scoringTeam !== targetTeam && event.playerTeam !== targetTeam) {
+            return false;
+          }
+
+          return true;
+        });
+
+        if (eventIndex < 0) {
           sendJson(res, 400, { error: 'Nao ha gol registrado para desfazer.' });
           return;
         }
 
-        const teamGoalCount = Number(goalsByTeamName[scoringTeam][key] || 0);
-        if (teamGoalCount <= 0) {
-          sendJson(res, 400, { error: 'Nao ha gol registrado nesse time para desfazer.' });
-          return;
+        const realIndex = events.length - 1 - eventIndex;
+        const [removedEvent] = events.splice(realIndex, 1);
+
+        if (!removedEvent.ownGoal) {
+          const currentGoals = Number(goalsByName[key] || 0);
+          if (currentGoals <= 0) {
+            sendJson(res, 400, { error: 'Nao ha gol registrado para desfazer.' });
+            return;
+          }
+
+          const teamGoalCount = Number(goalsByTeamName[scoringTeam][key] || 0);
+          if (teamGoalCount <= 0) {
+            sendJson(res, 400, { error: 'Nao ha gol registrado nesse time para desfazer.' });
+            return;
+          }
+
+          goalsByName[key] = currentGoals - 1;
+          goalsByTeamName[scoringTeam][key] = teamGoalCount - 1;
+          await incrementAthleteMetric(db, req, canonicalName, 'goals', -1, now);
         }
 
-        goalsByName[key] = currentGoals - 1;
-        goalsByTeamName[scoringTeam][key] = teamGoalCount - 1;
-        scoreA = calculateTeamScore(goalsByTeamName, 'A');
-        scoreB = calculateTeamScore(goalsByTeamName, 'B');
+        if (removedEvent.assistName) {
+          const assistKey = normalizeNameKey(removedEvent.assistName);
+          const currentAssists = Number(assistsByName[assistKey] || 0);
+          const teamAssistCount = Number(assistsByTeamName[scoringTeam][assistKey] || 0);
+          assistsByName[assistKey] = Math.max(0, currentAssists - 1);
+          assistsByTeamName[scoringTeam][assistKey] = Math.max(0, teamAssistCount - 1);
+          await incrementAthleteMetric(db, req, removedEvent.assistName, 'assists', -1, now);
+        }
+
+        scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
+        scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
 
         await docRef.set(
           {
             goalsByName,
             goalsByTeamName,
+            assistsByName,
+            assistsByTeamName,
+            events,
             scoreA,
             scoreB,
             updatedAt: now
@@ -815,17 +1028,18 @@ module.exports = async (req, res) => {
           { merge: true }
         );
 
-        await incrementAthleteMetric(db, req, canonicalName, 'goals', -1, now);
-
         sendJson(res, 200, {
           ok: true,
           date,
           name: canonicalName,
-          goals: goalsByName[key],
+          goals: goalsByName[key] || 0,
           scoreA,
           scoreB,
           goalsByName,
-          goalsByTeamName
+          goalsByTeamName,
+          assistsByName,
+          assistsByTeamName,
+          events
         });
         return;
       }
