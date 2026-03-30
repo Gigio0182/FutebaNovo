@@ -935,6 +935,36 @@ textarea {
   color: #163f3c;
 }
 
+.partidas-player-awards {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.28rem;
+  margin-left: auto;
+}
+
+.partidas-player-award {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  line-height: 1;
+  background: #edf7f3;
+}
+
+.partidas-player-award.is-mvp {
+  color: #a16207;
+  background: #fef3c7;
+}
+
+.partidas-player-award.is-worst {
+  color: #b42318;
+  background: #fee4e2;
+}
+
 .partidas-player-stats {
   display: inline-flex;
   align-items: center;

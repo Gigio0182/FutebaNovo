@@ -344,6 +344,12 @@ function getSelectedMetricName(record, metricKey) {
   return selectedPlayer || '';
 }
 
+function hasMetricSelection(record, metricKey, playerName) {
+  const source = metricKey === 'worst' ? record.worstByName : record.mvpByName;
+  const key = normalizeNameKey(playerName);
+  return Boolean(key && source && typeof source === 'object' && Number(source[key] || 0) > 0);
+}
+
 function buildFinalizeMetricOptions(record, selectedName = '') {
   const selectedKey = normalizeNameKey(selectedName);
   const options = getFinalizeMetricPlayers(record).map((name) => {
@@ -536,6 +542,12 @@ function renderTeamPlayers(record, teamKey, isEditable = false) {
   return names.map((name) => `
       <li class="partidas-player-row">
         <span class="partidas-player-name">${escapeHtml(name)}</span>
+        ${!isEditable && (hasMetricSelection(record, 'mvp', name) || hasMetricSelection(record, 'worst', name)) ? `
+          <span class="partidas-player-awards" aria-label="Premiacoes da partida">
+            ${hasMetricSelection(record, 'mvp', name) ? '<span class="partidas-player-award is-mvp" title="MVP">★</span>' : ''}
+            ${hasMetricSelection(record, 'worst', name) ? '<span class="partidas-player-award is-worst" title="Pior em campo">👎</span>' : ''}
+          </span>
+        ` : ''}
         ${isEditable ? `
           <button
             type="button"
