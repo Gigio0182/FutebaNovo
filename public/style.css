@@ -1960,7 +1960,9 @@ textarea {
   }
 
   .partidas-current-teams .confirmados-team-card {
-    padding: 0.38rem 0.3rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
 
   .partidas-current-teams .confirmados-team-list {
