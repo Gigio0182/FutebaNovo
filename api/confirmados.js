@@ -875,6 +875,11 @@ module.exports = async (req, res) => {
       }
 
       if (action === 'add-goal') {
+        if (matchStatus !== 'started') {
+          sendJson(res, 400, { error: 'A partida precisa estar iniciada para registrar eventos.' });
+          return;
+        }
+
         const key = normalizeNameKey(canonicalName);
         const targetTeam = String(body.team || '').trim().toUpperCase();
         const ownGoal = Boolean(body.ownGoal);
@@ -967,7 +972,9 @@ module.exports = async (req, res) => {
           { merge: true }
         );
 
-        await incrementAthleteMetric(db, req, canonicalName, 'goals', 1, now);
+        if (!ownGoal) {
+          await incrementAthleteMetric(db, req, canonicalName, 'goals', 1, now);
+        }
 
         sendJson(res, 200, {
           ok: true,
@@ -986,6 +993,11 @@ module.exports = async (req, res) => {
       }
 
       if (action === 'remove-goal') {
+        if (matchStatus !== 'started') {
+          sendJson(res, 400, { error: 'A partida precisa estar iniciada para alterar eventos.' });
+          return;
+        }
+
         const key = normalizeNameKey(canonicalName);
         const targetTeam = String(body.team || '').trim().toUpperCase();
         const ownGoal = Boolean(body.ownGoal);
@@ -1098,6 +1110,11 @@ module.exports = async (req, res) => {
       }
 
       if (action === 'add-assist') {
+        if (matchStatus !== 'started') {
+          sendJson(res, 400, { error: 'A partida precisa estar iniciada para registrar eventos.' });
+          return;
+        }
+
         const key = normalizeNameKey(canonicalName);
         const targetTeam = String(body.team || '').trim().toUpperCase();
         const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
@@ -1150,6 +1167,11 @@ module.exports = async (req, res) => {
       }
 
       if (action === 'remove-assist') {
+        if (matchStatus !== 'started') {
+          sendJson(res, 400, { error: 'A partida precisa estar iniciada para alterar eventos.' });
+          return;
+        }
+
         const key = normalizeNameKey(canonicalName);
         const targetTeam = String(body.team || '').trim().toUpperCase();
         const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);

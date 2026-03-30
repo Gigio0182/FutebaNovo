@@ -109,7 +109,15 @@ function getMatchPageUrl(date) {
 }
 
 function getActionLabel(status) {
-  return status === 'started' ? 'Abrir partida' : 'Iniciar';
+  if (status === 'started') {
+    return 'Abrir partida';
+  }
+
+  if (status === 'not-started') {
+    return 'Iniciar partida';
+  }
+
+  return '';
 }
 
 function getRecordByDate(date) {
@@ -410,7 +418,7 @@ function renderRecords(records) {
             <p class="partidas-date-meta">${confirmadosCount} confirmados <span class="partidas-status-badge ${getMatchStatusClassName(matchStatus)}">${getMatchStatusLabel(matchStatus)}</span></p>
           </div>
           <div class="partidas-list-actions">
-            <a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>
+            ${matchStatus === 'finished' ? '' : `<a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>`}
           </div>
         </div>
         ${matchStatus === 'started' || matchStatus === 'finished' ? renderMatchDetails(record) : ''}
