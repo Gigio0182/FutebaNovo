@@ -508,6 +508,7 @@ module.exports = async (req, res) => {
     const confirmadosCollection = db.collection(getConfirmadosCollectionName(req));
 
     if (req.method === 'GET') {
+      const now = new Date().toISOString();
       const dateRaw = String((req.query && req.query.date) || '').trim();
       const serverNow = now;
 
@@ -709,10 +710,6 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PUT') {
-      if (!requireAuth(req, res)) {
-        return;
-      }
-
       const body = await parseBody(req);
       const action = String(body.action || '').trim();
       const date = String(body.date || '').trim();
