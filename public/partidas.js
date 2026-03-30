@@ -228,14 +228,14 @@ function buildSummulaText(record) {
     : 'Sem eventos registrados.';
 
   return [
-    `SÚMULA - ${dateLabel}`,
-    `Placar: ${teamNameA} ${scoreA} x ${scoreB} ${teamNameB}`,
+    `*SÚMULA* - ${dateLabel}`,
+    `*Placar:* ${teamNameA} ${scoreA} x ${scoreB} ${teamNameB}`,
     '',
-    'Escalações:',
-    `${teamNameA}: ${teamAPlayers}`,
-    `${teamNameB}: ${teamBPlayers}`,
+    '*Escalações*',
+    `• ${teamNameA}: ${teamAPlayers}`,
+    `• ${teamNameB}: ${teamBPlayers}`,
     '',
-    'Gols e assistências:',
+    '*Gols e assistências*',
     eventLines
   ].join('\n');
 }
@@ -255,6 +255,37 @@ async function copyTextToClipboard(text) {
   textarea.select();
   document.execCommand('copy');
   document.body.removeChild(textarea);
+}
+
+function openWhatsappShare(text) {
+  const message = encodeURIComponent(text);
+  const mobileUrl = `whatsapp://send?text=${message}`;
+  const webUrl = `https://wa.me/?text=${message}`;
+
+  const popup = window.open(mobileUrl, '_blank', 'noopener,noreferrer');
+  if (!popup) {
+    window.open(webUrl, '_blank', 'noopener,noreferrer');
+  }
+}
+
+async function shareSummula(record) {
+  const text = buildSummulaText(record);
+
+  if (navigator.share && typeof navigator.share === 'function') {
+    try {
+      await navigator.share({
+        title: 'Súmula',
+        text
+      });
+      return;
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        return;
+      }
+    }
+  }
+
+  openWhatsappShare(text);
 }
 
 function renderTeamPlayers(record, teamKey, isEditable = false) {
@@ -572,8 +603,8 @@ confirmadosListEl.addEventListener('click', (event) => {
     event.preventDefault();
     (async () => {
       try {
-        await copyTextToClipboard(buildSummulaText(record));
-        setStatus('Súmula copiada para a área de transferência.');
+        await shareSummula(record);
+        setStatus('Súmula pronta para compartilhar.');
       } catch (error) {
         setStatus(error.message || 'Nao foi possivel copiar a súmula.', true);
       }
