@@ -231,6 +231,49 @@ function getTeamPlayers(record, teamKey) {
   return Array.isArray(source) ? source : [];
 }
 
+function getFinalizeMetricPlayers(record) {
+  const players = [...getTeamPlayers(record, 'A'), ...getTeamPlayers(record, 'B')];
+  const seen = new Set();
+
+  return players.filter((name) => {
+    const key = normalizeNameKey(name);
+    if (!key || seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function getSelectedMetricName(record, metricKey) {
+  const metricByName = metricKey === 'worst'
+    ? record.worstByName
+    : record.mvpByName;
+  const selectedKeys = Object.entries(metricByName && typeof metricByName === 'object' ? metricByName : {})
+    .filter(([, value]) => Number(value || 0) > 0)
+    .map(([key]) => key);
+
+  if (!selectedKeys.length) {
+    return '';
+  }
+
+  const selectedKey = selectedKeys[0];
+  const selectedPlayer = getFinalizeMetricPlayers(record).find((name) => normalizeNameKey(name) === selectedKey);
+  return selectedPlayer || '';
+}
+
+function buildFinalizeMetricOptions(record, selectedName = '') {
+  const selectedKey = normalizeNameKey(selectedName);
+  const options = getFinalizeMetricPlayers(record).map((name) => {
+    const key = normalizeNameKey(name);
+    const selected = key && key === selectedKey ? 'selected' : '';
+    return `<option value="${escapeAttr(name)}" ${selected}>${escapeHtml(name)}</option>`;
+  });
+
+  return [`<option value="">Selecione</option>`].concat(options).join('');
+}
+
 function getTeamScore(record, teamKey) {
   const directValue = Number(teamKey === 'A' ? record.scoreA : record.scoreB);
   if (!Number.isNaN(directValue)) {
@@ -651,6 +694,23 @@ function renderMatchDetails(record) {
       </div>
 
       ${isEditable ? `
+        <div class="partidas-finalize-metrics">
+          <label class="confirmados-field">
+            MVP da partida
+            <select data-role="finalize-mvp">
+              ${buildFinalizeMetricOptions(record, getSelectedMetricName(record, 'mvp'))}
+            </select>
+          </label>
+          <label class="confirmados-field">
+            Pior em campo
+            <select data-role="finalize-worst">
+              ${buildFinalizeMetricOptions(record, getSelectedMetricName(record, 'worst'))}
+            </select>
+          </label>
+        </div>
+      ` : ''}
+
+      ${isEditable ? `
         <div class="partidas-details-footer">
           <button type="button" class="btn danger partidas-finalize-btn" data-action="finalize-match" data-date="${escapeAttr(record.date)}">Finalizar</button>
           <button type="button" class="btn secondary partidas-pause-btn" data-action="toggle-match-timer" data-date="${escapeAttr(record.date)}">${getMatchTimerLabel(record)}</button>
@@ -838,6 +898,17 @@ confirmadosListEl.addEventListener('click', (event) => {
       return;
     }
 
+    const detailsEl = finalizeButton.closest('.partidas-details');
+    const mvpSelect = detailsEl ? detailsEl.querySelector('[data-role="finalize-mvp"]') : null;
+    const worstSelect = detailsEl ? detailsEl.querySelector('[data-role="finalize-worst"]') : null;
+    const mvpName = mvpSelect instanceof HTMLSelectElement ? String(mvpSelect.value || '').trim() : '';
+    const worstName = worstSelect instanceof HTMLSelectElement ? String(worstSelect.value || '').trim() : '';
+
+    if (mvpName && worstName && normalizeNameKey(mvpName) === normalizeNameKey(worstName)) {
+      setStatus('MVP e pior em campo nao podem ser o mesmo atleta.', true);
+      return;
+    }
+
     event.preventDefault();
     (async () => {
       try {
@@ -849,7 +920,9 @@ confirmadosListEl.addEventListener('click', (event) => {
             teamNameA: record.teamNameA,
             teamNameB: record.teamNameB,
             teamA: record.teamA,
-            teamB: record.teamB
+            teamB: record.teamB,
+            mvpName,
+            worstName
           })
         });
 

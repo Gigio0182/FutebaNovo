@@ -414,6 +414,35 @@ async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso
   return targetDoc.id;
 }
 
+async function applySingleChoiceMetricSelection(db, req, metricByName, selectedName, namesMap, field, nowIso) {
+  const nextMetricByName = { ...metricByName };
+  const selectedKey = selectedName ? normalizeNameKey(selectedName) : '';
+  const previousSelectedKeys = Object.entries(nextMetricByName)
+    .filter(([, value]) => Number(value || 0) > 0)
+    .map(([key]) => key);
+
+  Object.keys(nextMetricByName).forEach((key) => {
+    nextMetricByName[key] = 0;
+  });
+
+  if (selectedKey && namesMap.has(selectedKey)) {
+    nextMetricByName[selectedKey] = 1;
+  }
+
+  const previousSet = new Set(previousSelectedKeys);
+  for (const prevKey of previousSelectedKeys) {
+    if (prevKey !== selectedKey && namesMap.has(prevKey)) {
+      await incrementAthleteMetric(db, req, namesMap.get(prevKey), field, -1, nowIso);
+    }
+  }
+
+  if (selectedKey && !previousSet.has(selectedKey) && namesMap.has(selectedKey)) {
+    await incrementAthleteMetric(db, req, namesMap.get(selectedKey), field, 1, nowIso);
+  }
+
+  return nextMetricByName;
+}
+
 async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
   const athletesCollection = db.collection(getAthletesCollectionName(req));
   const athletesSnapshot = await athletesCollection.get();
@@ -869,11 +898,21 @@ module.exports = async (req, res) => {
         const nextTeamNameB = normalizeTeamName(body.teamNameB, teamNameB);
         const nextTeamA = normalizeRoster(body.teamA, namesMap);
         const nextTeamB = normalizeRoster(body.teamB, namesMap);
+        const nextMvpName = String(body.mvpName || '').trim();
+        const nextWorstName = String(body.worstName || '').trim();
 
         if (matchStatus !== 'started') {
           sendJson(res, 400, { error: 'A partida precisa estar iniciada para ser finalizada.' });
           return;
         }
+
+        if (nextMvpName && nextWorstName && normalizeNameKey(nextMvpName) === normalizeNameKey(nextWorstName)) {
+          sendJson(res, 400, { error: 'MVP e pior em campo nao podem ser o mesmo atleta.' });
+          return;
+        }
+
+        const nextMvpByName = await applySingleChoiceMetricSelection(db, req, mvpByName, nextMvpName, namesMap, 'mvp', now);
+        const nextWorstByName = await applySingleChoiceMetricSelection(db, req, worstByName, nextWorstName, namesMap, 'worst', now);
 
         matchStatus = 'finished';
 
@@ -884,6 +923,8 @@ module.exports = async (req, res) => {
             teamA: nextTeamA,
             teamB: nextTeamB,
             matchStatus,
+            mvpByName: nextMvpByName,
+            worstByName: nextWorstByName,
             matchTimer: pauseMatchTimer(matchTimer, now),
             scoreA,
             scoreB,
@@ -900,6 +941,8 @@ module.exports = async (req, res) => {
           teamNameB: nextTeamNameB,
           teamA: nextTeamA,
           teamB: nextTeamB,
+          mvpByName: nextMvpByName,
+          worstByName: nextWorstByName,
           matchTimer: pauseMatchTimer(matchTimer, now),
           scoreA,
           scoreB
