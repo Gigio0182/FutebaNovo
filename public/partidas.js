@@ -384,10 +384,12 @@ function renderMatchDetails(record) {
   `;
 }
 
-async function request(url) {
+async function request(url, options = {}) {
   const response = await fetch(url, {
+    ...options,
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
     }
   });
 
