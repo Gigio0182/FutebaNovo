@@ -1704,15 +1704,20 @@ textarea {
 }
 
 .partidas-clock-row {
-  margin: 0.65rem 0 0.2rem;
+  margin: 0.35rem 0 0.1rem;
   padding: 0.55rem 0.7rem;
   border-radius: 0.75rem;
   border: 1px solid #d8e8e2;
   background: #f7fbf9;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.6rem;
+  width: fit-content;
+  min-width: 10rem;
+  align-self: center;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .partidas-clock-label {
