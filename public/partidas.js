@@ -112,6 +112,11 @@ function getMatchPageUrl(date) {
   return `${GROUP_VALUE === 'domingo' ? '/domingo/partida' : '/partida'}?${params.toString()}`;
 }
 
+function getPartidasListUrl() {
+  const path = GROUP_VALUE === 'domingo' ? '/domingo/partidas' : '/partidas';
+  return `${window.location.origin}${path}`;
+}
+
 function getActionLabel(status) {
   if (status === 'started') {
     return 'Abrir partida';
@@ -464,6 +469,8 @@ function buildSummulaText(record) {
   const scoreA = getTeamScore(record, 'A');
   const scoreB = getTeamScore(record, 'B');
   const dateLabel = formatDate(record.date);
+  const mvpName = getSelectedMetricName(record, 'mvp') || 'Nao definido';
+  const worstName = getSelectedMetricName(record, 'worst') || 'Nao definido';
   const teamAPlayers = getTeamPlayers(record, 'A').join(', ') || 'Sem atletas';
   const teamBPlayers = getTeamPlayers(record, 'B').join(', ') || 'Sem atletas';
   const events = Array.isArray(record.events) ? record.events : [];
@@ -483,8 +490,15 @@ function buildSummulaText(record) {
     `• ${teamNameA}: ${teamAPlayers}`,
     `• ${teamNameB}: ${teamBPlayers}`,
     '',
+    '*Premiações*',
+    `• MVP: ${mvpName}`,
+    `• Pior em campo: ${worstName}`,
+    '',
     '*Eventos*',
-    eventLines
+    eventLines,
+    '',
+    '*Partidas*',
+    getPartidasListUrl()
   ].join('\n');
 }
 
