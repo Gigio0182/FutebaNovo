@@ -1249,6 +1249,10 @@ textarea {
   margin: 0;
 }
 
+.partida-summary-card {
+  margin-bottom: 0.9rem;
+}
+
 .partida-summary-grid {
   display: flex;
   align-items: center;
@@ -1868,6 +1872,15 @@ textarea {
 
   .partida-summary-grid {
     align-items: flex-start;
+  }
+
+  .partida-summary-card {
+    margin-bottom: 1rem;
+  }
+
+  .partida-summary-card h2,
+  .partida-summary-copy {
+    overflow-wrap: anywhere;
   }
 
   .partidas-setup-grid {
