@@ -1683,6 +1683,16 @@ textarea {
   width: 100%;
 }
 
+.partidas-events-timeline {
+  gap: 0.55rem;
+}
+
+.partidas-events-panel {
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #d4e4de;
+}
+
 .partidas-details-footer {
   margin-top: 0.7rem;
   padding-top: 0.65rem;
@@ -1736,14 +1746,62 @@ textarea {
 
 .partidas-event-row {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.35rem;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #184944;
   min-width: 0;
   width: 100%;
+}
+
+.partidas-event-row.is-team-a {
+  justify-content: flex-start;
+}
+
+.partidas-event-row.is-team-b {
+  justify-content: flex-end;
+}
+
+.partidas-event-card {
+  position: relative;
+  display: grid;
+  gap: 0.18rem;
+  max-width: min(100%, 78%);
+  padding: 0.52rem 0.68rem;
+  border-radius: 0.7rem;
+  background: #f3f7f5;
+  border: 1px solid #dce7e4;
+  color: #184944;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.partidas-event-row.is-team-b .partidas-event-card {
+  text-align: right;
+}
+
+.partidas-event-main {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.partidas-event-row.is-team-b .partidas-event-main {
+  justify-content: flex-end;
+}
+
+.partidas-event-time {
+  flex: 0 0 auto;
+  color: #0f766e;
+  font-weight: 900;
+}
+
+.partidas-event-assist {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #5a746f;
+}
+
+.partidas-event-row.is-team-b .partidas-event-assist {
+  text-align: right;
 }
 
 .partidas-event-icon {
@@ -1773,6 +1831,10 @@ textarea {
   white-space: nowrap;
   overflow-wrap: anywhere;
   text-align: left;
+}
+
+.partidas-event-row.is-team-b .partidas-event-player {
+  text-align: right;
 }
 
 .partidas-list-main h3,
@@ -2002,11 +2064,27 @@ textarea {
 
   .partidas-event-row {
     font-size: 0.79rem;
-    gap: 0.24rem;
   }
 
   .partidas-event-player {
     white-space: normal;
+  }
+
+  .partidas-event-card {
+    max-width: 100%;
+    padding: 0.48rem 0.56rem;
+  }
+
+  .partidas-event-main {
+    gap: 0.26rem;
+  }
+
+  .partidas-event-time {
+    font-size: 0.75rem;
+  }
+
+  .partidas-event-assist {
+    font-size: 0.76rem;
   }
 
   .partidas-list-actions {

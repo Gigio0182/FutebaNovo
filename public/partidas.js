@@ -263,6 +263,26 @@ function getEventLabel(event) {
   return `Gol de ${String(event.playerName || '')}`;
 }
 
+function getEventElapsedSeconds(event, record) {
+  const storedSeconds = Number(event && event.matchElapsedSeconds);
+  if (!Number.isNaN(storedSeconds) && storedSeconds >= 0) {
+    return Math.floor(storedSeconds);
+  }
+
+  const createdAt = Date.parse(String(event && event.createdAt || ''));
+  const startedAt = Date.parse(String(record && record.matchTimer && record.matchTimer.startedAt || ''));
+  if (Number.isNaN(createdAt) || Number.isNaN(startedAt)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor((createdAt - startedAt) / 1000));
+}
+
+function formatEventMinute(event, record) {
+  const elapsedSeconds = getEventElapsedSeconds(event, record);
+  return `${Math.max(1, Math.floor(elapsedSeconds / 60))}'`;
+}
+
 function formatSummulaEvent(event) {
   if (!event || typeof event !== 'object') {
     return '';
@@ -279,6 +299,21 @@ function formatSummulaEvent(event) {
   return `Gol de ${String(event.playerName || '')}`;
 }
 
+function formatSummulaEventLine(event, record) {
+  if (!event || typeof event !== 'object') {
+    return '';
+  }
+
+  const minuteLabel = formatEventMinute(event, record);
+  const eventTeam = String(event.playerTeam || event.scoringTeam || 'A').trim().toUpperCase() === 'B' ? 'B' : 'A';
+  const teamName = eventTeam === 'B'
+    ? (String(record.teamNameB || 'Time B').trim() || 'Time B')
+    : (String(record.teamNameA || 'Time A').trim() || 'Time A');
+  const eventLabel = formatSummulaEvent(event);
+
+  return `• ${minuteLabel} ${teamName}: ${eventLabel}`;
+}
+
 function buildSummulaText(record) {
   const teamNameA = String(record.teamNameA || 'Time A').trim() || 'Time A';
   const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
@@ -291,7 +326,7 @@ function buildSummulaText(record) {
 
   const eventLines = events.length
     ? events
-        .map((event, index) => `${index + 1}. ${formatSummulaEvent(event)}`)
+        .map((event) => formatSummulaEventLine(event, record))
         .filter(Boolean)
         .join('\n')
     : 'Sem eventos registrados.';
@@ -304,7 +339,7 @@ function buildSummulaText(record) {
     `• ${teamNameA}: ${teamAPlayers}`,
     `• ${teamNameB}: ${teamBPlayers}`,
     '',
-    '*Gols e assistências*',
+    '*Eventos*',
     eventLines
   ].join('\n');
 }
@@ -379,32 +414,39 @@ function renderTeamPlayers(record, teamKey, isEditable = false) {
     `).join('') || '<li><span>Sem atletas</span></li>';
 }
 
-function renderTeamEvents(record, teamKey, isEditable = false, latestEventId = '') {
+function renderMatchEvents(record, isEditable = false, latestEventId = '') {
   const events = Array.isArray(record.events) ? record.events : [];
-  const teamEvents = events.filter((event) => event && event.scoringTeam === teamKey);
 
-  if (!teamEvents.length) {
+  if (!events.length) {
     return '<li class="partidas-event-empty">Nenhum evento registrado.</li>';
   }
 
-  return teamEvents.map((event) => {
+  return events.map((event) => {
+    const eventTeam = String(event && (event.playerTeam || event.scoringTeam) || 'A').trim().toUpperCase() === 'B' ? 'B' : 'A';
     const canRemove = Boolean(isEditable && event && event.id && String(event.id) === String(latestEventId));
+    const minuteLabel = formatEventMinute(event, record);
 
     return `
-      <li class="partidas-event-row">
-        <span class="partidas-event-icon ${event.ownGoal ? 'is-own-goal' : ''}">⚽</span>
-        <span class="partidas-event-player">${escapeHtml(getEventLabel(event))}</span>
-        ${canRemove ? `
-          <button
-            type="button"
-            class="partidas-event-remove-btn"
-            data-action="remove-last-event"
-            data-date="${escapeAttr(record.date)}"
-            data-team="${teamKey}"
-            data-name="${escapeAttr(String(event.playerName || ''))}"
-            data-own-goal="${event.ownGoal ? '1' : '0'}"
-          >🗑️</button>
-        ` : ''}
+      <li class="partidas-event-row is-team-${eventTeam.toLowerCase()}">
+        <article class="partidas-event-card">
+          <div class="partidas-event-main">
+            <span class="partidas-event-time">${escapeHtml(minuteLabel)}</span>
+            <span class="partidas-event-icon ${event.ownGoal ? 'is-own-goal' : ''}">⚽</span>
+            <span class="partidas-event-player">${escapeHtml(getEventLabel(event))}</span>
+          </div>
+          ${event.assistName ? `<p class="partidas-event-assist">assist: ${escapeHtml(event.assistName)}</p>` : ''}
+          ${canRemove ? `
+            <button
+              type="button"
+              class="partidas-event-remove-btn"
+              data-action="remove-last-event"
+              data-date="${escapeAttr(record.date)}"
+              data-team="${eventTeam}"
+              data-name="${escapeAttr(String(event.playerName || ''))}"
+              data-own-goal="${event.ownGoal ? '1' : '0'}"
+            >🗑️</button>
+          ` : ''}
+        </article>
       </li>
     `;
   }).join('');
@@ -580,24 +622,19 @@ function renderMatchDetails(record) {
           <ul class="confirmados-team-list">
             ${renderTeamPlayers(record, 'A', isEditable)}
           </ul>
-          <div class="partidas-team-events">
-            <p class="partidas-team-events-title">Eventos</p>
-            <ul class="partidas-events-list">
-              ${renderTeamEvents(record, 'A', isEditable, latestEventId)}
-            </ul>
-          </div>
         </div>
         <div class="confirmados-team-card">
           <ul class="confirmados-team-list">
             ${renderTeamPlayers(record, 'B', isEditable)}
           </ul>
-          <div class="partidas-team-events">
-            <p class="partidas-team-events-title">Eventos</p>
-            <ul class="partidas-events-list">
-              ${renderTeamEvents(record, 'B', isEditable, latestEventId)}
-            </ul>
-          </div>
         </div>
+      </div>
+
+      <div class="partidas-events-panel">
+        <p class="partidas-team-events-title">Eventos da partida</p>
+        <ul class="partidas-events-list partidas-events-timeline">
+          ${renderMatchEvents(record, isEditable, latestEventId)}
+        </ul>
       </div>
 
       ${isEditable ? `

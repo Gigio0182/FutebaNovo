@@ -288,6 +288,7 @@ function normalizeEvents(rawEvents, namesMap) {
       scoringTeam,
       assistName: assistKey && namesMap.has(assistKey) ? namesMap.get(assistKey) : '',
       assistKey: assistKey && namesMap.has(assistKey) ? assistKey : '',
+      matchElapsedSeconds: Math.max(0, Math.floor(Number(event.matchElapsedSeconds || event.elapsedSeconds || 0))),
       ownGoal: Boolean(event.ownGoal),
       createdAt: String(event.createdAt || event.updatedAt || '')
     });
@@ -1017,6 +1018,7 @@ module.exports = async (req, res) => {
         const assistCanonical = assistKey ? namesMap.get(assistKey) : '';
         const inTeamA = teamA.some((name) => normalizeNameKey(name) === key);
         const inTeamB = teamB.some((name) => normalizeNameKey(name) === key);
+        const eventElapsedSeconds = getMatchTimerElapsedSeconds(matchTimer, now);
 
         if (!inTeamA && !inTeamB) {
           sendJson(res, 400, { error: 'Defina o time do atleta antes de registrar gol.' });
@@ -1080,6 +1082,7 @@ module.exports = async (req, res) => {
           scoringTeam,
           assistName: ownGoal ? '' : assistCanonical,
           ownGoal,
+          matchElapsedSeconds: eventElapsedSeconds,
           createdAt: now
         };
 
