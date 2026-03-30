@@ -843,6 +843,10 @@ textarea {
   font-size: 0.85rem;
 }
 
+.confirmados-action-btn.is-start-match {
+  background: #0f766e;
+}
+
 .partidas-goal-btn {
   min-width: 3.2rem;
   padding: 0.34rem 0.55rem;

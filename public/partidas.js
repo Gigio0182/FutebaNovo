@@ -840,6 +840,7 @@ function renderRecords(records) {
     .map((record) => {
       const matchStatus = String(record.matchStatus || 'not-started');
       const confirmadosCount = Number(record.count || 0) || (Array.isArray(record.names) ? record.names.length : 0);
+      const isStartAction = matchStatus === 'not-started';
 
       return `
       <article class="confirmados-item">
@@ -854,7 +855,7 @@ function renderRecords(records) {
                 <button type="button" class="confirmados-action-btn" data-action="toggle-match-details" data-date="${escapeAttr(record.date)}">${isMatchDetailsCollapsed(record.date) ? 'Mostrar detalhes' : 'Ocultar detalhes'}</button>
                 <button type="button" class="confirmados-action-btn" data-action="copy-summula" data-date="${escapeAttr(record.date)}">Súmula</button>
               `
-              : `<a class="confirmados-action-btn" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>`}
+              : `<a class="confirmados-action-btn ${isStartAction ? 'is-start-match' : ''}" href="${getMatchPageUrl(record.date)}">${escapeHtml(getActionLabel(matchStatus))}</a>`}
           </div>
         </div>
         ${matchStatus === 'started' || matchStatus === 'finished' ? renderMatchDetails(record) : ''}
