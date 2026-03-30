@@ -323,7 +323,7 @@ function renderTeamEvents(record, teamKey, isEditable = false, latestEventId = '
 
     return `
       <li class="partidas-event-row">
-        <span class="partidas-event-icon">⚽</span>
+        <span class="partidas-event-icon ${event.ownGoal ? 'is-own-goal' : ''}">⚽</span>
         <span class="partidas-event-player">${escapeHtml(getEventLabel(event))}</span>
         ${canRemove ? `
           <button
