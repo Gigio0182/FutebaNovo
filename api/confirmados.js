@@ -527,6 +527,53 @@ async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
   }
 }
 
+async function resetMatchMetrics(db, req, namesMap, events, mvpByName, worstByName, nowIso) {
+  const goalDeltasByKey = new Map();
+  const assistDeltasByKey = new Map();
+
+  (Array.isArray(events) ? events : []).forEach((event) => {
+    if (!event || event.type !== 'goal' || event.ownGoal) {
+      return;
+    }
+
+    const playerKey = normalizeNameKey(event.playerName);
+    if (playerKey && namesMap.has(playerKey)) {
+      goalDeltasByKey.set(playerKey, Number(goalDeltasByKey.get(playerKey) || 0) - 1);
+    }
+
+    const assistKey = normalizeNameKey(event.assistName);
+    if (assistKey && namesMap.has(assistKey)) {
+      assistDeltasByKey.set(assistKey, Number(assistDeltasByKey.get(assistKey) || 0) - 1);
+    }
+  });
+
+  for (const [key, delta] of goalDeltasByKey.entries()) {
+    await incrementAthleteMetric(db, req, namesMap.get(key), 'goals', delta, nowIso);
+  }
+
+  for (const [key, delta] of assistDeltasByKey.entries()) {
+    await incrementAthleteMetric(db, req, namesMap.get(key), 'assists', delta, nowIso);
+  }
+
+  const selectedMvpKeys = Object.entries(mvpByName && typeof mvpByName === 'object' ? mvpByName : {})
+    .filter(([, value]) => Number(value || 0) > 0)
+    .map(([key]) => key)
+    .filter((key) => namesMap.has(key));
+
+  const selectedWorstKeys = Object.entries(worstByName && typeof worstByName === 'object' ? worstByName : {})
+    .filter(([, value]) => Number(value || 0) > 0)
+    .map(([key]) => key)
+    .filter((key) => namesMap.has(key));
+
+  for (const key of selectedMvpKeys) {
+    await incrementAthleteMetric(db, req, namesMap.get(key), 'mvp', -1, nowIso);
+  }
+
+  for (const key of selectedWorstKeys) {
+    await incrementAthleteMetric(db, req, namesMap.get(key), 'worst', -1, nowIso);
+  }
+}
+
 module.exports = async (req, res) => {
   if (handleOptions(req, res)) {
     return;
@@ -762,7 +809,7 @@ module.exports = async (req, res) => {
       const namesMap = mapNamesByKey(names);
       const nameKey = normalizeNameKey(rawName);
       const canonicalName = namesMap.get(nameKey);
-      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'set-match-status', 'toggle-match-status', 'start-match', 'finalize-match', 'pause-match-timer', 'resume-match-timer']);
+      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'set-match-status', 'toggle-match-status', 'start-match', 'finalize-match', 'pause-match-timer', 'resume-match-timer', 'reset-match']);
 
       if (!canonicalName && !actionsWithoutName.has(action)) {
         sendJson(res, 400, { error: 'Atleta nao encontrado na lista de confirmados da data.' });
@@ -946,6 +993,49 @@ module.exports = async (req, res) => {
           matchTimer: pauseMatchTimer(matchTimer, now),
           scoreA,
           scoreB
+        });
+        return;
+      }
+
+      if (action === 'reset-match') {
+        if (!requireAuth(req, res)) {
+          return;
+        }
+
+        await resetMatchMetrics(db, req, namesMap, events, mvpByName, worstByName, now);
+
+        const nextGoalsByTeamName = { A: {}, B: {} };
+        const nextAssistsByTeamName = { A: {}, B: {} };
+
+        await docRef.set(
+          {
+            goalsByName: {},
+            assistsByName: {},
+            goalsByTeamName: nextGoalsByTeamName,
+            assistsByTeamName: nextAssistsByTeamName,
+            events: [],
+            mvpByName: {},
+            worstByName: {},
+            matchStatus: 'not-started',
+            matchTimer: {
+              status: 'paused',
+              elapsedSeconds: 0,
+              startedAt: ''
+            },
+            scoreA: 0,
+            scoreB: 0,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          matchStatus: 'not-started',
+          scoreA: 0,
+          scoreB: 0,
+          events: []
         });
         return;
       }

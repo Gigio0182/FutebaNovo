@@ -758,6 +758,7 @@ function renderMatchDetails(record) {
   const teamNameB = String(record.teamNameB || 'Time B').trim() || 'Time B';
   const isEditable = String(record.matchStatus || '') === 'started';
   const isFinished = String(record.matchStatus || '') === 'finished';
+  const canResetMatch = getIsLoggedIn() && (isEditable || isFinished);
   const isCollapsed = isFinished && isMatchDetailsCollapsed(record.date);
   const latestEvent = getLatestEvent(record);
   const latestEventId = latestEvent && latestEvent.id ? String(latestEvent.id) : '';
@@ -831,10 +832,11 @@ function renderMatchDetails(record) {
         </div>
       ` : ''}
 
-      ${isEditable ? `
+      ${isEditable || canResetMatch ? `
         <div class="partidas-details-footer">
-          <button type="button" class="btn danger partidas-finalize-btn" data-action="finalize-match" data-date="${escapeAttr(record.date)}">Finalizar</button>
-          <button type="button" class="btn secondary partidas-pause-btn" data-action="toggle-match-timer" data-date="${escapeAttr(record.date)}">${getMatchTimerLabel(record)}</button>
+          ${isEditable ? `<button type="button" class="btn danger partidas-finalize-btn" data-action="finalize-match" data-date="${escapeAttr(record.date)}">Finalizar</button>` : ''}
+          ${isEditable ? `<button type="button" class="btn secondary partidas-pause-btn" data-action="toggle-match-timer" data-date="${escapeAttr(record.date)}">${getMatchTimerLabel(record)}</button>` : ''}
+          ${canResetMatch ? `<button type="button" class="btn danger partidas-reset-btn" data-action="reset-match" data-date="${escapeAttr(record.date)}">Resetar partida</button>` : ''}
         </div>
       ` : ''}
     </div>
@@ -842,10 +844,12 @@ function renderMatchDetails(record) {
 }
 
 async function request(url, options = {}) {
+  const token = localStorage.getItem(TOKEN_KEY) || '';
   const response = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     }
   });
@@ -1005,6 +1009,41 @@ confirmadosListEl.addEventListener('click', (event) => {
         notifyPartidasUpdate(date, 'remove-goal');
         await loadRecords();
         setStatus('Registro removido com sucesso.');
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    })();
+    return;
+  }
+
+  const resetMatchButton = event.target.closest('[data-action="reset-match"]');
+  if (resetMatchButton) {
+    const date = String(resetMatchButton.dataset.date || '').trim();
+    const record = getRecordByDate(date);
+    if (!record || !getIsLoggedIn()) {
+      return;
+    }
+
+    const confirmed = window.confirm('Isso vai apagar gols, assistencias, MVP, pior em campo e voltar a partida para nao iniciada. Deseja continuar?');
+    if (!confirmed) {
+      return;
+    }
+
+    event.preventDefault();
+    (async () => {
+      try {
+        await request(buildApiUrl(), {
+          method: 'PUT',
+          body: JSON.stringify({
+            action: 'reset-match',
+            date
+          })
+        });
+
+        clearFinalizeDraft(date);
+        notifyPartidasUpdate(date, 'reset-match');
+        await loadRecords();
+        setStatus('Partida resetada com sucesso.');
       } catch (error) {
         setStatus(error.message, true);
       }

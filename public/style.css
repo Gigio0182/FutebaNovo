@@ -1794,6 +1794,10 @@ textarea {
   min-width: 9rem;
 }
 
+.partidas-reset-btn {
+  min-width: 9rem;
+}
+
 .partidas-events-list-right .partidas-event-row {
   justify-content: flex-start;
 }
