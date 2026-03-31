@@ -1849,12 +1849,16 @@ textarea {
 
 .partidas-event-assist {
   margin: 0;
+  display: block;
   font-size: 0.82rem;
   font-weight: 700;
   color: #5a746f;
+  padding-left: 1.8rem;
 }
 
 .partidas-event-row.is-team-b .partidas-event-assist {
+  padding-left: 0;
+  padding-right: 1.8rem;
   text-align: right;
 }
 
@@ -2163,15 +2167,18 @@ textarea {
 
   .partidas-event-player {
     white-space: normal;
+    font-size: 0.74rem;
+    line-height: 1.2;
   }
 
   .partidas-event-card {
     max-width: 100%;
-    padding: 0.48rem 0.56rem;
+    padding: 0.44rem 0.5rem;
   }
 
   .partidas-event-main {
     gap: 0.26rem;
+    align-items: flex-start;
   }
 
   .partidas-event-time {
@@ -2180,6 +2187,11 @@ textarea {
 
   .partidas-event-assist {
     font-size: 0.76rem;
+    padding-left: 1.48rem;
+  }
+
+  .partidas-event-row.is-team-b .partidas-event-assist {
+    padding-right: 1.48rem;
   }
 
   .partidas-list-actions {

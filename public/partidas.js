@@ -412,6 +412,18 @@ function getEventLabel(event) {
   return `Gol de ${String(event.playerName || '')}`;
 }
 
+function getEventPrimaryLabel(event) {
+  if (!event || typeof event !== 'object') {
+    return 'Gol';
+  }
+
+  if (event.ownGoal) {
+    return `Gol contra de ${String(event.playerName || '')}`;
+  }
+
+  return `Gol de ${String(event.playerName || '')}`;
+}
+
 function getEventElapsedSeconds(event, record) {
   const storedSeconds = Number(event && event.matchElapsedSeconds);
   if (!Number.isNaN(storedSeconds) && storedSeconds >= 0) {
@@ -589,6 +601,7 @@ function renderMatchEvents(record, isEditable = false, latestEventId = '') {
     const eventTeam = String(event && (event.playerTeam || event.scoringTeam) || 'A').trim().toUpperCase() === 'B' ? 'B' : 'A';
     const canRemove = Boolean(isEditable && event && event.id && String(event.id) === String(latestEventId));
     const minuteLabel = formatEventMinute(event, record);
+    const hasAssist = Boolean(event && !event.ownGoal && String(event.assistName || '').trim());
 
     return `
       <li class="partidas-event-row is-team-${eventTeam.toLowerCase()}">
@@ -596,8 +609,9 @@ function renderMatchEvents(record, isEditable = false, latestEventId = '') {
           <div class="partidas-event-main">
             <span class="partidas-event-time">${escapeHtml(minuteLabel)}</span>
             <span class="partidas-event-icon ${event.ownGoal ? 'is-own-goal' : ''}">⚽</span>
-            <span class="partidas-event-player">${escapeHtml(getEventLabel(event))}</span>
+            <span class="partidas-event-player">${escapeHtml(getEventPrimaryLabel(event))}</span>
           </div>
+          ${hasAssist ? `<p class="partidas-event-assist">Assistência: ${escapeHtml(String(event.assistName || '').trim())}</p>` : ''}
           ${canRemove ? `
             <button
               type="button"
