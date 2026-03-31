@@ -13,6 +13,23 @@ let syncInProgress = false;
 let expandedAthleteId = null;
 let editingNameAthleteId = null;
 
+function sanitizeAthleteName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/[\u0000-\u001F\u007F\u00AD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function normalizeNameKey(value) {
+  return sanitizeAthleteName(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function escapeAttr(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -121,10 +138,17 @@ async function commitNameEdit(athleteId, rawName) {
     return;
   }
 
-  const nextName = String(rawName || '').trim();
+  const nextName = sanitizeAthleteName(rawName || '');
   const currentName = String(athlete.name || '').trim();
 
   if (!nextName || nextName === currentName) {
+    applySearchFilter();
+    return;
+  }
+
+  const duplicateExists = athletesCache.some((item) => item.id !== athleteId && normalizeNameKey(item.name) === normalizeNameKey(nextName));
+  if (duplicateExists) {
+    setStatus('Ja existe um atleta cadastrado com esse nome.', true);
     applySearchFilter();
     return;
   }
@@ -343,6 +367,9 @@ function renderAthletes(athletes) {
         </div>
         <div class="athlete-details" style="display:${expanded ? 'block' : 'none'};margin-top:0.7rem;">
           <div class="metrics-grid">
+            ${metricCard(athlete, 'games', 'Jogos')}
+            ${metricCard(athlete, 'goals', 'Gols')}
+            ${metricCard(athlete, 'assists', 'Assistencias')}
             ${metricCard(athlete, 'mvp', 'MVP')}
             ${metricCard(athlete, 'worst', 'Pior em campo')}
           </div>
@@ -389,9 +416,15 @@ athleteForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   try {
-    const name = athleteNameInput.value.trim();
+    const name = sanitizeAthleteName(athleteNameInput.value || '');
     if (!name) {
       setStatus('Nome do atleta e obrigatorio.', true);
+      return;
+    }
+
+    const duplicateExists = athletesCache.some((athlete) => normalizeNameKey(athlete.name) === normalizeNameKey(name));
+    if (duplicateExists) {
+      setStatus('Ja existe um atleta cadastrado com esse nome.', true);
       return;
     }
 

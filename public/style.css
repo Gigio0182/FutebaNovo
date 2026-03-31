@@ -587,6 +587,7 @@ textarea {
 
 .metrics-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
   gap: 0.55rem;
 }
 
