@@ -792,6 +792,10 @@ module.exports = async (req, res) => {
       const rawName = String(body.name || '').trim();
       const team = String(body.team || '').trim().toUpperCase();
 
+      if (action === 'reset-match' && !requireAuth(req, res)) {
+        return;
+      }
+
       if (!isValidDate(date)) {
         sendJson(res, 400, { error: 'Data invalida. Use o formato YYYY-MM-DD.' });
         return;
@@ -998,10 +1002,6 @@ module.exports = async (req, res) => {
       }
 
       if (action === 'reset-match') {
-        if (!requireAuth(req, res)) {
-          return;
-        }
-
         await resetMatchMetrics(db, req, namesMap, events, mvpByName, worstByName, now);
 
         const nextGoalsByTeamName = { A: {}, B: {} };
