@@ -2,6 +2,7 @@ const { getDb } = require('./_lib/firebase');
 const { handleOptions, parseBody, sendJson } = require('./_lib/http');
 const { requireAuth } = require('./_lib/auth');
 const { getAthletesCollectionName } = require('./_lib/group');
+const { sanitizeAthleteName, normalizeNameKey } = require('./_lib/names');
 
 module.exports = async (req, res) => {
   if (handleOptions(req, res)) {
@@ -34,10 +35,18 @@ module.exports = async (req, res) => {
       }
 
       const body = await parseBody(req);
-      const name = (body.name || '').trim();
+      const name = sanitizeAthleteName(body.name || '');
 
       if (!name) {
         sendJson(res, 400, { error: 'Nome do atleta e obrigatorio.' });
+        return;
+      }
+
+      const duplicateKey = normalizeNameKey(name);
+      const existingSnapshot = await athletesCollection.get();
+      const existingDuplicate = existingSnapshot.docs.find((doc) => normalizeNameKey((doc.data() || {}).name) === duplicateKey);
+      if (existingDuplicate) {
+        sendJson(res, 409, { error: 'Ja existe um atleta cadastrado com esse nome.' });
         return;
       }
 
@@ -73,7 +82,7 @@ module.exports = async (req, res) => {
       const body = await parseBody(req);
       const id = (body.id || '').trim();
       const field = (body.field || '').trim();
-      const nextName = (body.name || '').trim();
+      const nextName = sanitizeAthleteName(body.name || '');
       const deltaRaw = Number(body.delta);
       const delta = Number.isFinite(deltaRaw) && deltaRaw !== 0 ? deltaRaw : 1;
 
@@ -88,6 +97,14 @@ module.exports = async (req, res) => {
 
         if (!currentSnap.exists) {
           sendJson(res, 404, { error: 'Atleta nao encontrado.' });
+          return;
+        }
+
+        const duplicateKey = normalizeNameKey(nextName);
+        const existingSnapshot = await athletesCollection.get();
+        const existingDuplicate = existingSnapshot.docs.find((doc) => doc.id !== id && normalizeNameKey((doc.data() || {}).name) === duplicateKey);
+        if (existingDuplicate) {
+          sendJson(res, 409, { error: 'Ja existe um atleta cadastrado com esse nome.' });
           return;
         }
 

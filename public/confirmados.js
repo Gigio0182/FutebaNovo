@@ -193,28 +193,43 @@ function notifyPartidasUpdate(date, action) {
   }
 }
 
-function normalizeNames(text) {
-  return Array.from(
-    new Set(
-      String(text || '')
-        .split(/\r?\n/)
-        .map((line) => {
-          const raw = String(line || '');
-          const match = raw.match(/^\s*\d+\s*[-.)–—]\s*(.+)$/u);
-          const candidate = match ? match[1] : raw;
+function sanitizeAthleteName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/[\u0000-\u001F\u007F\u00AD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
 
-          return candidate
-            .replace(/\(\s*avulso\s*\)/gi, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
-        })
-        .filter(Boolean)
-    )
-  );
+function normalizeNames(text) {
+  const uniqueByKey = new Map();
+
+  String(text || '')
+    .split(/\r?\n/)
+    .forEach((line) => {
+      const raw = String(line || '');
+      const match = raw.match(/^\s*\d+\s*[-.)–—]\s*(.+)$/u);
+      const candidate = match ? match[1] : raw;
+      const name = sanitizeAthleteName(
+        candidate
+          .replace(/\(\s*avulso\s*\)/gi, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      );
+      const key = normalizeNameKey(name);
+
+      if (!key || uniqueByKey.has(key)) {
+        return;
+      }
+
+      uniqueByKey.set(key, name);
+    });
+
+  return Array.from(uniqueByKey.values());
 }
 
 function normalizeNameKey(value) {
-  return String(value || '')
+  return sanitizeAthleteName(value)
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()

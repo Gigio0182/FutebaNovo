@@ -2,6 +2,7 @@ const { getDb } = require('./_lib/firebase');
 const { handleOptions, parseBody, sendJson } = require('./_lib/http');
 const { requireAuth } = require('./_lib/auth');
 const { getAthletesCollectionName, getConfirmadosCollectionName } = require('./_lib/group');
+const { sanitizeAthleteName, normalizeNameKey } = require('./_lib/names');
 
 function isValidDate(dateText) {
   return /^\d{4}-\d{2}-\d{2}$/.test(dateText);
@@ -102,10 +103,10 @@ function normalizeNames(rawNames) {
       const match = text.match(/^\s*\d+\s*[-–—]\s*(.+)$/u);
       const candidate = match ? match[1] : text;
 
-      return candidate
+      return sanitizeAthleteName(candidate
         .replace(/\(\s*avulso\s*\)/gi, '')
         .replace(/\s{2,}/g, ' ')
-        .trim();
+        .trim());
     })
     .filter(Boolean)
     .map((name) => name.slice(0, 60));
@@ -121,16 +122,6 @@ function normalizeNames(rawNames) {
 
   return Array.from(uniqueByKey.values());
 }
-
-function normalizeNameKey(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function mapNamesByKey(names) {
   const map = new Map();
   names.forEach((name) => {
