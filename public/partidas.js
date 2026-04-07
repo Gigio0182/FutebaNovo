@@ -444,35 +444,104 @@ function formatEventMinute(event, record) {
   return `${Math.max(1, Math.floor(elapsedSeconds / 60))}'`;
 }
 
-function formatSummulaEvent(event) {
-  if (!event || typeof event !== 'object') {
+function joinSummaryParts(parts) {
+  if (!parts.length) {
     return '';
   }
 
-  if (event.ownGoal) {
-    return `Gol contra de ${String(event.playerName || '')}`;
+  if (parts.length === 1) {
+    return parts[0];
   }
 
-  if (event.assistName) {
-    return `Gol de ${String(event.playerName || '')} | Assistência: ${String(event.assistName || '')}`;
+  if (parts.length === 2) {
+    return `${parts[0]} e ${parts[1]}`;
   }
 
-  return `Gol de ${String(event.playerName || '')}`;
+  return `${parts.slice(0, -1).join(', ')} e ${parts[parts.length - 1]}`;
 }
 
-function formatSummulaEventLine(event, record) {
-  if (!event || typeof event !== 'object') {
-    return '';
+function formatContributionLabel(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function buildSummulaEventLines(record) {
+  const events = Array.isArray(record && record.events) ? record.events : [];
+  if (!events.length) {
+    return 'Sem eventos registrados.';
   }
 
-  const minuteLabel = formatEventMinute(event, record);
-  const eventTeam = String(event.playerTeam || event.scoringTeam || 'A').trim().toUpperCase() === 'B' ? 'B' : 'A';
-  const teamName = eventTeam === 'B'
-    ? (String(record.teamNameB || 'Time B').trim() || 'Time B')
-    : (String(record.teamNameA || 'Time A').trim() || 'Time A');
-  const eventLabel = formatSummulaEvent(event);
+  const summaryByPlayer = new Map();
 
-  return `• ${minuteLabel} ${teamName}: ${eventLabel}`;
+  const ensurePlayerSummary = (playerName) => {
+    const name = String(playerName || '').trim();
+    if (!name) {
+      return null;
+    }
+
+    const key = normalizeNameKey(name);
+    if (!key) {
+      return null;
+    }
+
+    if (!summaryByPlayer.has(key)) {
+      summaryByPlayer.set(key, {
+        name,
+        goals: 0,
+        assists: 0,
+        ownGoals: 0
+      });
+    }
+
+    return summaryByPlayer.get(key);
+  };
+
+  events.forEach((event) => {
+    if (!event || typeof event !== 'object') {
+      return;
+    }
+
+    const playerSummary = ensurePlayerSummary(event.playerName);
+    if (playerSummary) {
+      if (event.ownGoal) {
+        playerSummary.ownGoals += 1;
+      } else {
+        playerSummary.goals += 1;
+      }
+    }
+
+    if (!event.ownGoal) {
+      const assistSummary = ensurePlayerSummary(event.assistName);
+      if (assistSummary) {
+        assistSummary.assists += 1;
+      }
+    }
+  });
+
+  const lines = Array.from(summaryByPlayer.values())
+    .map((summary) => {
+      const parts = [];
+
+      if (summary.goals > 0) {
+        parts.push(formatContributionLabel(summary.goals, 'gol'));
+      }
+
+      if (summary.assists > 0) {
+        parts.push(formatContributionLabel(summary.assists, 'assist.', 'assist.'));
+      }
+
+      if (summary.ownGoals > 0) {
+        parts.push(formatContributionLabel(summary.ownGoals, 'gol contra', 'gols contra'));
+      }
+
+      if (!parts.length) {
+        return '';
+      }
+
+      return `• ${summary.name} - ${joinSummaryParts(parts)}`;
+    })
+    .filter(Boolean);
+
+  return lines.length ? lines.join('\n') : 'Sem eventos registrados.';
 }
 
 function buildSummulaText(record) {
@@ -485,14 +554,7 @@ function buildSummulaText(record) {
   const worstName = getSelectedMetricName(record, 'worst') || 'Nao definido';
   const teamAPlayers = getTeamPlayers(record, 'A').join(', ') || 'Sem atletas';
   const teamBPlayers = getTeamPlayers(record, 'B').join(', ') || 'Sem atletas';
-  const events = Array.isArray(record.events) ? record.events : [];
-
-  const eventLines = events.length
-    ? events
-        .map((event) => formatSummulaEventLine(event, record))
-        .filter(Boolean)
-        .join('\n')
-    : 'Sem eventos registrados.';
+  const eventLines = buildSummulaEventLines(record);
 
   return [
     `*SÚMULA* - ${dateLabel}`,
