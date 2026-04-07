@@ -518,6 +518,7 @@ function buildSummulaEventLines(record) {
   });
 
   const lines = Array.from(summaryByPlayer.values())
+    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' }))
     .map((summary) => {
       const parts = [];
 
