@@ -1,6 +1,7 @@
 const { getDb } = require('./_lib/firebase');
 const { handleOptions, sendJson } = require('./_lib/http');
 const { getAthletesCollectionName } = require('./_lib/group');
+const cache = require('./_lib/cache');
 
 function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0, defender = 0 }) {
   const pontos =
@@ -25,8 +26,16 @@ module.exports = async (req, res) => {
 
   try {
     const db = getDb();
+    const collectionName = getAthletesCollectionName(req);
+    const group = String((req.query && req.query.group) || '').trim();
+    const cacheKey = `athletes:${group}`;
 
-    const athletesSnap = await db.collection(getAthletesCollectionName(req)).get();
+    let athletesSnap = cache.get('athletes', group);
+    
+    if (!athletesSnap) {
+      athletesSnap = await db.collection(collectionName).limit(1000).get();
+      cache.set('athletes', athletesSnap, group);
+    }
 
     const ranking = athletesSnap.docs
       .map((doc) => {
