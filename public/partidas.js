@@ -530,7 +530,7 @@ function buildSummulaEventLines(record) {
 
   const lines = Array.from(summaryByPlayer.values())
     .map((summary) => {
-      const pontosPartida = (Number(summary.goals) * 2.5) + (Number(summary.assists) * 1.5);
+      const pontosPartida = (Number(summary.goals) * 2.5) + (Number(summary.assists) * 1.5) + 0.5;
       return {
         ...summary,
         pontos: Math.max(0, Math.round(pontosPartida * 100) / 100)
@@ -573,8 +573,6 @@ function buildSummulaText(record) {
   const scoreA = getTeamScore(record, 'A');
   const scoreB = getTeamScore(record, 'B');
   const dateLabel = formatDate(record.date);
-  const mvpName = getSelectedMetricName(record, 'mvp') || 'Nao definido';
-  const worstName = getSelectedMetricName(record, 'worst') || 'Nao definido';
   const teamAPlayers = getTeamPlayers(record, 'A').join(', ') || 'Sem atletas';
   const teamBPlayers = getTeamPlayers(record, 'B').join(', ') || 'Sem atletas';
   const eventLines = buildSummulaEventLines(record);
@@ -586,10 +584,6 @@ function buildSummulaText(record) {
     '*Escalações*',
     `• ${teamNameA}: ${teamAPlayers}`,
     `• ${teamNameB}: ${teamBPlayers}`,
-    '',
-    '*Premiações*',
-    `• MVP: ${mvpName}`,
-    `• Pior em campo: ${worstName}`,
     '',
     '*Eventos*',
     eventLines,
