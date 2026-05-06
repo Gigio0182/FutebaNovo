@@ -111,6 +111,7 @@ function renderRanking() {
             <span class="stat-pill stat-goals">Gols: <strong>${row.goals}</strong></span>
             <span class="stat-pill stat-assists">Assistencias: <strong>${row.assists}</strong></span>
             <span class="stat-pill stat-mvp">MVP: <strong>${row.mvp || 0}</strong></span>
+            <span class="stat-pill stat-defender">Melhor Defensor: <strong>${row.defender || 0}</strong></span>
             <span class="stat-pill stat-worst">Pior em campo: <strong>${row.worst || 0}</strong></span>
           </div>
         </article>

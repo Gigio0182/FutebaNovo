@@ -283,12 +283,13 @@ function setFinalizeDraft(date, nextDraft) {
     return;
   }
 
-  if (!nextDraft || (!nextDraft.mvpName && !nextDraft.worstName)) {
+  if (!nextDraft || (!nextDraft.mvpName && !nextDraft.worstName && !nextDraft.defenderName)) {
     finalizeDraftByDate.delete(key);
   } else {
     finalizeDraftByDate.set(key, {
       mvpName: String(nextDraft.mvpName || '').trim(),
-      worstName: String(nextDraft.worstName || '').trim()
+      worstName: String(nextDraft.worstName || '').trim(),
+      defenderName: String(nextDraft.defenderName || '').trim()
     });
   }
 
@@ -328,15 +329,26 @@ function getFinalizeMetricPlayers(record) {
 function getSelectedMetricName(record, metricKey) {
   const draft = getFinalizeDraft(record && record.date);
   if (draft) {
-    const draftValue = metricKey === 'worst' ? draft.worstName : draft.mvpName;
+    let draftValue = '';
+    if (metricKey === 'worst') {
+      draftValue = draft.worstName;
+    } else if (metricKey === 'defender') {
+      draftValue = draft.defenderName;
+    } else {
+      draftValue = draft.mvpName;
+    }
     if (draftValue) {
       return draftValue;
     }
   }
 
-  const metricByName = metricKey === 'worst'
-    ? record.worstByName
-    : record.mvpByName;
+  let metricByName = record.mvpByName;
+  if (metricKey === 'worst') {
+    metricByName = record.worstByName;
+  } else if (metricKey === 'defender') {
+    metricByName = record.defenderByName;
+  }
+
   const selectedKeys = Object.entries(metricByName && typeof metricByName === 'object' ? metricByName : {})
     .filter(([, value]) => Number(value || 0) > 0)
     .map(([key]) => key);
@@ -351,7 +363,12 @@ function getSelectedMetricName(record, metricKey) {
 }
 
 function hasMetricSelection(record, metricKey, playerName) {
-  const source = metricKey === 'worst' ? record.worstByName : record.mvpByName;
+  let source = record.mvpByName;
+  if (metricKey === 'worst') {
+    source = record.worstByName;
+  } else if (metricKey === 'defender') {
+    source = record.defenderByName;
+  }
   const key = normalizeNameKey(playerName);
   return Boolean(key && source && typeof source === 'object' && Number(source[key] || 0) > 0);
 }
@@ -908,6 +925,12 @@ function renderMatchDetails(record) {
               ${buildFinalizeMetricOptions(record, getSelectedMetricName(record, 'worst'))}
             </select>
           </label>
+          <label class="confirmados-field">
+            Melhor Defensor
+            <select data-role="finalize-defender">
+              ${buildFinalizeMetricOptions(record, getSelectedMetricName(record, 'defender'))}
+            </select>
+          </label>
         </div>
       ` : ''}
 
@@ -1141,8 +1164,10 @@ confirmadosListEl.addEventListener('click', (event) => {
     const detailsEl = finalizeButton.closest('.partidas-details');
     const mvpSelect = detailsEl ? detailsEl.querySelector('[data-role="finalize-mvp"]') : null;
     const worstSelect = detailsEl ? detailsEl.querySelector('[data-role="finalize-worst"]') : null;
+    const defenderSelect = detailsEl ? detailsEl.querySelector('[data-role="finalize-defender"]') : null;
     const mvpName = mvpSelect instanceof HTMLSelectElement ? String(mvpSelect.value || '').trim() : '';
     const worstName = worstSelect instanceof HTMLSelectElement ? String(worstSelect.value || '').trim() : '';
+    const defenderName = defenderSelect instanceof HTMLSelectElement ? String(defenderSelect.value || '').trim() : '';
 
     if (mvpName && worstName && normalizeNameKey(mvpName) === normalizeNameKey(worstName)) {
       setStatus('MVP e pior em campo nao podem ser o mesmo atleta.', true);
@@ -1162,8 +1187,9 @@ confirmadosListEl.addEventListener('click', (event) => {
             teamA: record.teamA,
             teamB: record.teamB,
             mvpName,
-            worstName
-          })
+            worstName,
+            defenderName
+          })\n        });
         });
 
         clearFinalizeDraft(date);
@@ -1219,7 +1245,7 @@ confirmadosListEl.addEventListener('change', (event) => {
     return;
   }
 
-  if (!target.matches('[data-role="finalize-mvp"], [data-role="finalize-worst"]')) {
+  if (!target.matches('[data-role="finalize-mvp"], [data-role="finalize-worst"], [data-role="finalize-defender"]')) {
     return;
   }
 
@@ -1231,10 +1257,12 @@ confirmadosListEl.addEventListener('change', (event) => {
 
   const mvpSelect = detailsEl.querySelector('[data-role="finalize-mvp"]');
   const worstSelect = detailsEl.querySelector('[data-role="finalize-worst"]');
+  const defenderSelect = detailsEl.querySelector('[data-role="finalize-defender"]');
   const mvpName = mvpSelect instanceof HTMLSelectElement ? String(mvpSelect.value || '').trim() : '';
   const worstName = worstSelect instanceof HTMLSelectElement ? String(worstSelect.value || '').trim() : '';
+  const defenderName = defenderSelect instanceof HTMLSelectElement ? String(defenderSelect.value || '').trim() : '';
 
-  setFinalizeDraft(date, { mvpName, worstName });
+  setFinalizeDraft(date, { mvpName, worstName, defenderName });
 });
 
 document.addEventListener('click', (event) => {

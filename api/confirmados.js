@@ -623,6 +623,7 @@ module.exports = async (req, res) => {
         }
         const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
         const worstByName = normalizeMetricByName(data.worstByName, namesMap);
+        const defenderByName = normalizeMetricByName(data.defenderByName, namesMap);
         const matchTimer = normalizeMatchTimer(data.matchTimer, normalizeMatchStatus(data.matchStatus), data.updatedAt || data.createdAt || new Date().toISOString());
         const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
         const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
@@ -648,6 +649,7 @@ module.exports = async (req, res) => {
               events,
               mvpByName,
               worstByName,
+              defenderByName,
               updatedAt: data.updatedAt || null
             }
           ]
@@ -677,6 +679,7 @@ module.exports = async (req, res) => {
         }
         const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
         const worstByName = normalizeMetricByName(data.worstByName, namesMap);
+        const defenderByName = normalizeMetricByName(data.defenderByName, namesMap);
         const matchTimer = normalizeMatchTimer(data.matchTimer, normalizeMatchStatus(data.matchStatus), data.updatedAt || data.createdAt || now);
         const scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
         const scoreB = calculateTeamScoreFromEvents(events, 'B', goalsByTeamName);
@@ -699,6 +702,7 @@ module.exports = async (req, res) => {
           events,
           mvpByName,
           worstByName,
+          defenderByName,
           updatedAt: data.updatedAt || null
         };
       });
@@ -955,6 +959,7 @@ module.exports = async (req, res) => {
         const nextTeamB = normalizeRoster(body.teamB, namesMap);
         const nextMvpName = String(body.mvpName || '').trim();
         const nextWorstName = String(body.worstName || '').trim();
+        const nextDefenderName = String(body.defenderName || '').trim();
 
         if (matchStatus !== 'started') {
           sendJson(res, 400, { error: 'A partida precisa estar iniciada para ser finalizada.' });
@@ -968,6 +973,7 @@ module.exports = async (req, res) => {
 
         const nextMvpByName = await applySingleChoiceMetricSelection(db, req, mvpByName, nextMvpName, namesMap, 'mvp', now);
         const nextWorstByName = await applySingleChoiceMetricSelection(db, req, worstByName, nextWorstName, namesMap, 'worst', now);
+        const nextDefenderByName = await applySingleChoiceMetricSelection(db, req, defenderByName, nextDefenderName, namesMap, 'defender', now);
 
         matchStatus = 'finished';
 
@@ -980,6 +986,7 @@ module.exports = async (req, res) => {
             matchStatus,
             mvpByName: nextMvpByName,
             worstByName: nextWorstByName,
+            defenderByName: nextDefenderByName,
             matchTimer: pauseMatchTimer(matchTimer, now),
             scoreA,
             scoreB,
@@ -998,6 +1005,7 @@ module.exports = async (req, res) => {
           teamB: nextTeamB,
           mvpByName: nextMvpByName,
           worstByName: nextWorstByName,
+          defenderByName: nextDefenderByName,
           matchTimer: pauseMatchTimer(matchTimer, now),
           scoreA,
           scoreB
