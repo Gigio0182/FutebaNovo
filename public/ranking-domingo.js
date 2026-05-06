@@ -51,12 +51,13 @@ async function loadRanking() {
   }
 }
 
-function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0 }) {
+function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0, defender = 0 }) {
   const pontos =
     (Number(games) * 0.5) +
     (Number(assists) * 1.5) +
     (Number(goals) * 2.5) +
-    (Number(mvp) * 3) -
+    (Number(mvp) * 3) +
+    (Number(defender) * 3) -
     (Number(worst) * 0.5);
   return Math.max(0, Math.round(pontos * 100) / 100);
 }

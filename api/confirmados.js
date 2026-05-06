@@ -385,6 +385,7 @@ async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso
       games: 0,
       mvp: field === 'mvp' ? Math.max(0, delta) : 0,
       worst: field === 'worst' ? Math.max(0, delta) : 0,
+      defender: field === 'defender' ? Math.max(0, delta) : 0,
       createdAt: nowIso,
       updatedAt: nowIso
     });
@@ -483,6 +484,7 @@ async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
       games: 1,
       mvp: 0,
       worst: 0,
+      defender: 0,
       createdAt: nowIso,
       updatedAt: nowIso
     });
@@ -495,7 +497,8 @@ async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
         assists: 0,
         games: 1,
         mvp: 0,
-        worst: 0
+        worst: 0,
+        defender: 0
       }
     });
   }
@@ -518,7 +521,7 @@ async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
   }
 }
 
-async function resetMatchMetrics(db, req, namesMap, events, mvpByName, worstByName, nowIso) {
+async function resetMatchMetrics(db, req, namesMap, events, mvpByName, worstByName, defenderByName, nowIso) {
   const goalDeltasByKey = new Map();
   const assistDeltasByKey = new Map();
 
@@ -556,12 +559,21 @@ async function resetMatchMetrics(db, req, namesMap, events, mvpByName, worstByNa
     .map(([key]) => key)
     .filter((key) => namesMap.has(key));
 
+  const selectedDefenderKeys = Object.entries(defenderByName && typeof defenderByName === 'object' ? defenderByName : {})
+    .filter(([, value]) => Number(value || 0) > 0)
+    .map(([key]) => key)
+    .filter((key) => namesMap.has(key));
+
   for (const key of selectedMvpKeys) {
     await incrementAthleteMetric(db, req, namesMap.get(key), 'mvp', -1, nowIso);
   }
 
   for (const key of selectedWorstKeys) {
     await incrementAthleteMetric(db, req, namesMap.get(key), 'worst', -1, nowIso);
+  }
+
+  for (const key of selectedDefenderKeys) {
+    await incrementAthleteMetric(db, req, namesMap.get(key), 'defender', -1, nowIso);
   }
 }
 
@@ -804,7 +816,7 @@ module.exports = async (req, res) => {
       const namesMap = mapNamesByKey(names);
       const nameKey = normalizeNameKey(rawName);
       const canonicalName = namesMap.get(nameKey);
-      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'set-match-status', 'toggle-match-status', 'start-match', 'finalize-match', 'pause-match-timer', 'resume-match-timer', 'reset-match']);
+      const actionsWithoutName = new Set(['clear-mvp', 'clear-worst', 'clear-defender', 'set-match-status', 'toggle-match-status', 'start-match', 'finalize-match', 'pause-match-timer', 'resume-match-timer', 'reset-match']);
 
       if (!canonicalName && !actionsWithoutName.has(action)) {
         sendJson(res, 400, { error: 'Atleta nao encontrado na lista de confirmados da data.' });
@@ -829,6 +841,7 @@ module.exports = async (req, res) => {
       }
       const mvpByName = normalizeMetricByName(data.mvpByName, namesMap);
       const worstByName = normalizeMetricByName(data.worstByName, namesMap);
+      const defenderByName = normalizeMetricByName(data.defenderByName, namesMap);
       let matchStatus = normalizeMatchStatus(data.matchStatus);
       let matchTimer = normalizeMatchTimer(data.matchTimer, matchStatus, data.updatedAt || data.createdAt || now);
       let scoreA = calculateTeamScoreFromEvents(events, 'A', goalsByTeamName);
@@ -993,7 +1006,7 @@ module.exports = async (req, res) => {
       }
 
       if (action === 'reset-match') {
-        await resetMatchMetrics(db, req, namesMap, events, mvpByName, worstByName, now);
+        await resetMatchMetrics(db, req, namesMap, events, mvpByName, worstByName, defenderByName, now);
 
         const nextGoalsByTeamName = { A: {}, B: {} };
         const nextAssistsByTeamName = { A: {}, B: {} };
@@ -1627,6 +1640,47 @@ module.exports = async (req, res) => {
           date,
           name: selectedKey ? namesMap.get(selectedKey) : '',
           worstByName
+        });
+        return;
+      }
+
+      if (action === 'set-defender' || action === 'clear-defender') {
+        const selectedKey = action === 'set-defender' ? normalizeNameKey(canonicalName) : '';
+        const previousSelectedKeys = Object.entries(defenderByName)
+          .filter(([, value]) => Number(value || 0) > 0)
+          .map(([key]) => key);
+
+        Object.keys(defenderByName).forEach((key) => {
+          defenderByName[key] = 0;
+        });
+
+        if (selectedKey) {
+          defenderByName[selectedKey] = 1;
+        }
+
+        await docRef.set(
+          {
+            defenderByName,
+            updatedAt: now
+          },
+          { merge: true }
+        );
+
+        const previousSet = new Set(previousSelectedKeys);
+        for (const prevKey of previousSelectedKeys) {
+          if (prevKey !== selectedKey && namesMap.has(prevKey)) {
+            await incrementAthleteMetric(db, req, namesMap.get(prevKey), 'defender', -1, now);
+          }
+        }
+        if (selectedKey && !previousSet.has(selectedKey) && namesMap.has(selectedKey)) {
+          await incrementAthleteMetric(db, req, namesMap.get(selectedKey), 'defender', 1, now);
+        }
+
+        sendJson(res, 200, {
+          ok: true,
+          date,
+          name: selectedKey ? namesMap.get(selectedKey) : '',
+          defenderByName
         });
         return;
       }
