@@ -128,15 +128,20 @@ function getConfirmedNames() {
   return Array.isArray(recordCache && recordCache.names) ? recordCache.names : [];
 }
 
-function buildRosterOptions(teamKey, names, selectedNames, disabled = false) {
+function buildRosterOptions(teamKey, names, selectedNames, blockedNameKeys = new Set(), disabled = false) {
   const role = teamKey === 'A' ? 'team-a-player' : 'team-b-player';
 
   return names.map((name) => {
-    const checked = selectedNames.some((item) => normalizeNameKey(item) === normalizeNameKey(name));
+    const key = normalizeNameKey(name);
+    const checked = selectedNames.some((item) => normalizeNameKey(item) === key);
+    const blockedByOtherTeam = blockedNameKeys.has(key);
+    const inputDisabled = disabled || blockedByOtherTeam;
+    const disabledReason = blockedByOtherTeam ? 'title="Atleta ja selecionado no outro time"' : '';
     return `
-      <label class="partidas-roster-option">
-        <input type="checkbox" data-role="${role}" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} />
+      <label class="partidas-roster-option ${blockedByOtherTeam ? 'is-disabled' : ''}">
+        <input type="checkbox" data-role="${role}" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} ${inputDisabled ? 'disabled' : ''} ${disabledReason} />
         <span>${escapeHtml(name)}</span>
+        ${blockedByOtherTeam ? '<small class="partidas-roster-note">(no outro time)</small>' : ''}
       </label>
     `;
   }).join('') || '<p class="partidas-setup-empty">Nenhum atleta disponivel.</p>';
@@ -225,6 +230,8 @@ function getSetupDraft() {
 function renderRosterPanel(teamKey, names, locked = !getIsLoggedIn()) {
   const draft = getSetupDraft();
   const selectedNames = teamKey === 'A' ? draft.teamA : draft.teamB;
+  const blockedNames = teamKey === 'A' ? draft.teamB : draft.teamA;
+  const blockedNameKeys = new Set((Array.isArray(blockedNames) ? blockedNames : []).map((name) => normalizeNameKey(name)));
   const title = teamKey === 'A' ? 'Atletas do Time A' : 'Atletas do Time B';
 
   return `
@@ -237,7 +244,7 @@ function renderRosterPanel(teamKey, names, locked = !getIsLoggedIn()) {
         <span class="partidas-roster-count" data-role="roster-count">${selectedNames.length}</span>
       </div>
       <div class="partidas-roster-list" data-role="roster-list">
-        ${buildRosterOptions(teamKey, names, selectedNames, locked)}
+        ${buildRosterOptions(teamKey, names, selectedNames, blockedNameKeys, locked)}
       </div>
     </section>
   `;
@@ -288,13 +295,29 @@ function refreshRosterPanels() {
 
     if (listEl) {
       const checkedKeys = new Set(selectedNames.map((name) => normalizeNameKey(name)));
+      const blockedNames = teamKey === 'A' ? draft.teamB : draft.teamA;
+      const blockedKeys = new Set((Array.isArray(blockedNames) ? blockedNames : []).map((name) => normalizeNameKey(name)));
       const inputs = listEl.querySelectorAll(`input[data-role="${teamKey === 'A' ? 'team-a-player' : 'team-b-player'}"]`);
 
       inputs.forEach((input) => {
         const name = String(input.value || '').trim();
         const key = normalizeNameKey(name);
+        const blockedByOtherTeam = blockedKeys.has(key);
+        const label = input.closest('.partidas-roster-option');
+        const note = label ? label.querySelector('.partidas-roster-note') : null;
         input.checked = checkedKeys.has(key);
-        input.disabled = rosterLocked;
+        input.disabled = rosterLocked || blockedByOtherTeam;
+        if (blockedByOtherTeam) {
+          input.setAttribute('title', 'Atleta ja selecionado no outro time');
+        } else {
+          input.removeAttribute('title');
+        }
+        if (label) {
+          label.classList.toggle('is-disabled', blockedByOtherTeam);
+        }
+        if (note) {
+          note.textContent = blockedByOtherTeam ? '(no outro time)' : '';
+        }
       });
     }
   });
