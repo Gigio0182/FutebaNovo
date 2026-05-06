@@ -5,7 +5,7 @@ const GROUP_VALUE = document.body.dataset.group || '';
 const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_futeba_token';
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
 const PARTIDAS_FINALIZE_DRAFT_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_finalize_draft' : 'app_futeba_finalize_draft';
-const AUTO_REFRESH_MS = 3000;
+const AUTO_REFRESH_MS = 60000;
 
 let isLoadingRecords = false;
 let recordsCache = [];
