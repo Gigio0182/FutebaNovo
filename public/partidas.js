@@ -475,23 +475,6 @@ function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0 
   return Math.max(0, Math.round(pontos * 100) / 100);
 }
 
-function getPontosForAthlete(athleteName) {
-  const name = normalizeNameKey(String(athleteName || '').trim());
-  if (!name) {
-    return 0;
-  }
-
-  const athlete = rankingCache.find((a) =>
-    normalizeNameKey(String(a.name || '').trim()) === name
-  );
-
-  if (!athlete) {
-    return 0;
-  }
-
-  return Number(athlete.points || athlete.pontos || 0);
-}
-
 function buildSummulaEventLines(record) {
   const events = Array.isArray(record && record.events) ? record.events : [];
   if (!events.length) {
@@ -516,8 +499,7 @@ function buildSummulaEventLines(record) {
         name,
         goals: 0,
         assists: 0,
-        ownGoals: 0,
-        pontos: getPontosForAthlete(name)
+        ownGoals: 0
       });
     }
 
@@ -547,6 +529,13 @@ function buildSummulaEventLines(record) {
   });
 
   const lines = Array.from(summaryByPlayer.values())
+    .map((summary) => {
+      const pontosPartida = (Number(summary.goals) * 2.5) + (Number(summary.assists) * 1.5);
+      return {
+        ...summary,
+        pontos: Math.max(0, Math.round(pontosPartida * 100) / 100)
+      };
+    })
     .sort((left, right) => {
       if (right.pontos !== left.pontos) return right.pontos - left.pontos;
       return left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' });
