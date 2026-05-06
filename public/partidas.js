@@ -5,7 +5,7 @@ const GROUP_VALUE = document.body.dataset.group || '';
 const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_futeba_token';
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
 const PARTIDAS_FINALIZE_DRAFT_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_finalize_draft' : 'app_futeba_finalize_draft';
-const AUTO_REFRESH_MS = 60000;
+const AUTO_REFRESH_MS = 120000;
 
 let isLoadingRecords = false;
 let recordsCache = [];
@@ -15,6 +15,7 @@ let goalDialogState = null;
 let openFinishedMatchDetails = new Set();
 let serverClockOffsetMs = 0;
 let finalizeDraftByDate = new Map();
+let pendingRequests = new Map();
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -946,22 +947,35 @@ function renderMatchDetails(record) {
 }
 
 async function request(url, options = {}) {
+  if (options.method === 'GET' && pendingRequests.has(url)) {
+    return pendingRequests.get(url);
+  }
+
   const token = localStorage.getItem(TOKEN_KEY) || '';
-  const response = await fetch(url, {
+  const fetchPromise = fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     }
+  }).then(async (response) => {
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Erro na requisicao.');
+    }
+    return data;
+  }).finally(() => {
+    if (options.method === 'GET') {
+      pendingRequests.delete(url);
+    }
   });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || 'Erro na requisicao.');
+  if (options.method === 'GET') {
+    pendingRequests.set(url, fetchPromise);
   }
 
-  return data;
+  return fetchPromise;
 }
 
 function renderRecords(records) {
