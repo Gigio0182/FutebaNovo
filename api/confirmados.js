@@ -362,7 +362,7 @@ async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso
   }
 
   const athletesCollection = db.collection(getAthletesCollectionName(req));
-  const snapshot = await athletesCollection.get();
+  const snapshot = await athletesCollection.limit(1000).get();
   const targetKey = normalizeNameKey(athleteName);
   let targetDoc = null;
 
@@ -437,7 +437,7 @@ async function applySingleChoiceMetricSelection(db, req, metricByName, selectedN
 
 async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
   const athletesCollection = db.collection(getAthletesCollectionName(req));
-  const athletesSnapshot = await athletesCollection.get();
+  const athletesSnapshot = await athletesCollection.limit(1000).get();
 
   const athleteByKey = new Map();
   athletesSnapshot.docs.forEach((doc) => {
@@ -888,7 +888,7 @@ module.exports = async (req, res) => {
         const teamAKeys = new Set(nextTeamA.map((name) => normalizeNameKey(name)));
         const hasOverlap = nextTeamB.some((name) => teamAKeys.has(normalizeNameKey(name)));
         const currentMatchAlreadyStarted = normalizeMatchStatus(data.matchStatus) === 'started';
-        const startedMatchesSnapshot = await confirmadosCollection.where('matchStatus', '==', 'started').get();
+        const startedMatchesSnapshot = await confirmadosCollection.where('matchStatus', '==', 'started').limit(10).get();
         const anotherStartedMatchExists = startedMatchesSnapshot.docs.some((doc) => String(doc.id || doc.data().date || '') !== date);
 
         if (!nextTeamA.length) {

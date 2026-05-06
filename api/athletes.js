@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
       }
 
       const duplicateKey = normalizeNameKey(name);
-      const existingSnapshot = await athletesCollection.get();
+      const existingSnapshot = await athletesCollection.limit(1000).get();
       const existingDuplicate = existingSnapshot.docs.find((doc) => normalizeNameKey((doc.data() || {}).name) === duplicateKey);
       if (existingDuplicate) {
         sendJson(res, 409, { error: 'Ja existe um atleta cadastrado com esse nome.' });
@@ -103,7 +103,7 @@ module.exports = async (req, res) => {
         }
 
         const duplicateKey = normalizeNameKey(nextName);
-        const existingSnapshot = await athletesCollection.get();
+        const existingSnapshot = await athletesCollection.limit(1000).get();
         const existingDuplicate = existingSnapshot.docs.find((doc) => doc.id !== id && normalizeNameKey((doc.data() || {}).name) === duplicateKey);
         if (existingDuplicate) {
           sendJson(res, 409, { error: 'Ja existe um atleta cadastrado com esse nome.' });
