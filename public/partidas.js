@@ -9,6 +9,7 @@ const AUTO_REFRESH_MS = 3000;
 
 let isLoadingRecords = false;
 let recordsCache = [];
+let rankingCache = [];
 let goalDialog = null;
 let goalDialogState = null;
 let openFinishedMatchDetails = new Set();
@@ -464,6 +465,39 @@ function formatContributionLabel(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
+function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0 }) {
+  const pontos =
+    (Number(games) * 0.5) +
+    (Number(assists) * 1.5) +
+    (Number(goals) * 2.5) +
+    (Number(mvp) * 3) -
+    (Number(worst) * 0.5);
+  return Math.max(0, Math.round(pontos * 100) / 100);
+}
+
+function getPontosForAthlete(athleteName) {
+  const name = normalizeNameKey(String(athleteName || '').trim());
+  if (!name) {
+    return 0;
+  }
+
+  const athlete = rankingCache.find((a) =>
+    normalizeNameKey(String(a.name || '').trim()) === name
+  );
+
+  if (!athlete) {
+    return 0;
+  }
+
+  return calcularPontos({
+    games: athlete.games,
+    goals: athlete.goals,
+    assists: athlete.assists,
+    mvp: athlete.mvp,
+    worst: athlete.worst
+  });
+}
+
 function buildSummulaEventLines(record) {
   const events = Array.isArray(record && record.events) ? record.events : [];
   if (!events.length) {
@@ -488,7 +522,8 @@ function buildSummulaEventLines(record) {
         name,
         goals: 0,
         assists: 0,
-        ownGoals: 0
+        ownGoals: 0,
+        pontos: getPontosForAthlete(name)
       });
     }
 
@@ -518,7 +553,10 @@ function buildSummulaEventLines(record) {
   });
 
   const lines = Array.from(summaryByPlayer.values())
-    .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' }))
+    .sort((left, right) => {
+      if (right.pontos !== left.pontos) return right.pontos - left.pontos;
+      return left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' });
+    })
     .map((summary) => {
       const parts = [];
 
@@ -538,7 +576,8 @@ function buildSummulaEventLines(record) {
         return '';
       }
 
-      return `• ${summary.name} - ${joinSummaryParts(parts)}`;
+      const pontosText = summary.pontos > 0 ? ` (${summary.pontos} pts)` : '';
+      return `• ${summary.name}${pontosText} - ${joinSummaryParts(parts)}`;
     })
     .filter(Boolean);
 
@@ -1281,6 +1320,22 @@ document.addEventListener('submit', async (event) => {
   }
 });
 
+async function loadRanking() {
+  try {
+    const params = new URLSearchParams();
+    if (GROUP_VALUE) {
+      params.set('group', GROUP_VALUE);
+    }
+
+    const url = params.toString() ? `/api/ranking?${params.toString()}` : '/api/ranking';
+    const data = await request(url);
+    rankingCache = data.ranking || [];
+  } catch (error) {
+    console.error('Erro ao carregar ranking:', error);
+    rankingCache = [];
+  }
+}
+
 async function loadRecords() {
   if (isLoadingRecords) {
     return;
@@ -1318,13 +1373,13 @@ function isSameGroupUpdate(payload) {
 
 function startAutoRefresh() {
   window.setInterval(() => {
-    loadRecords().catch(handleAutoRefreshError);
+    Promise.all([loadRanking(), loadRecords()]).catch(handleAutoRefreshError);
   }, AUTO_REFRESH_MS);
 }
 
 loadFinalizeDrafts();
 
-loadRecords().then(() => {
+Promise.all([loadRanking(), loadRecords()]).then(() => {
   setStatus('Partidas carregadas.');
   startMatchTimerTicker();
 }).catch((error) => {
@@ -1336,7 +1391,7 @@ window.addEventListener('storage', (event) => {
     try {
       const payload = JSON.parse(event.newValue);
       if (isSameGroupUpdate(payload)) {
-        loadRecords().catch(handleAutoRefreshError);
+        Promise.all([loadRanking(), loadRecords()]).catch(handleAutoRefreshError);
       }
     } catch {
       // Ignore malformed payloads.
