@@ -33,6 +33,10 @@
       "dest": "/garcons-domingo.html"
     },
     {
+      "src": "^/domingo/melhores-defensores/?$",
+      "dest": "/melhores-defensores-domingo.html"
+    },
+    {
       "src": "^/domingo/participacoes/?$",
       "dest": "/participacoes-domingo.html"
     },
@@ -67,6 +71,10 @@
     {
       "src": "^/garcons/?$",
       "dest": "/garcons.html"
+    },
+    {
+      "src": "^/melhores-defensores/?$",
+      "dest": "/melhores-defensores.html"
     },
     {
       "src": "^/participacoes/?$",

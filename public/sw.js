@@ -1,4 +1,4 @@
-const CACHE_NAME = 'app-futeba-v9';
+const CACHE_NAME = 'app-futeba-v10';
 const ASSETS = [
   '/',
   '/domingo',
@@ -16,6 +16,8 @@ const ASSETS = [
   '/domingo/goleadores',
   '/garcons',
   '/domingo/garcons',
+  '/melhores-defensores',
+  '/domingo/melhores-defensores',
   '/participacoes',
   '/domingo/participacoes',
   '/style.css',
@@ -29,6 +31,8 @@ const ASSETS = [
   '/goleadores-domingo.js',
   '/garcons.js',
   '/garcons-domingo.js',
+  '/melhores-defensores.js',
+  '/melhores-defensores-domingo.js',
   '/participacoes.js',
   '/participacoes-domingo.js',
   '/confirmados.js',
