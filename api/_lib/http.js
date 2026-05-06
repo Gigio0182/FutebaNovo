@@ -4,6 +4,7 @@ function sendJson(res, statusCode, payload) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Cache-Control', 'public, max-age=60');
   res.end(JSON.stringify(payload));
 }
 

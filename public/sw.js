@@ -1,4 +1,4 @@
-const CACHE_NAME = 'app-futeba-v10';
+const CACHE_NAME = 'app-futeba-v11';
 const ASSETS = [
   '/',
   '/domingo',
@@ -77,11 +77,56 @@ self.addEventListener('message', (event) => {
   }
 });
 
+async function cacheApiResponse(request, cacheExpiration = 30000) {
+  const cache = await caches.open(CACHE_NAME);
+  const url = new URL(request.url);
+  const cacheKey = `${request.url}:timestamp`;
+
+  try {
+    const response = await fetch(request);
+    
+    if (response.ok) {
+      const clonedResponse = response.clone();
+      const data = await clonedResponse.json();
+      const timestampedData = { ...data, __cached_at: Date.now() };
+      const timestampedResponse = new Response(JSON.stringify(timestampedData), {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+      });
+      cache.put(request, timestampedResponse);
+    }
+    
+    return response;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) {
+      try {
+        const data = await cached.json();
+        const cachedAt = data.__cached_at || 0;
+        if (Date.now() - cachedAt < cacheExpiration) {
+          return cached;
+        }
+      } catch (e) {
+        return cached;
+      }
+    }
+    
+    return new Response(JSON.stringify({ error: 'Offline' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   if (url.pathname.startsWith('/api/')) {
+    if (request.method === 'GET') {
+      event.respondWith(cacheApiResponse(request, 60000));
+    }
     return;
   }
 
