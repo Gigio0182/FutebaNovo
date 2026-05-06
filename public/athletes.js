@@ -187,6 +187,7 @@ function addLocalAthlete(name, localId) {
     games: 0,
     mvp: 0,
     worst: 0,
+    defender: 0,
     pending: true
   });
 
@@ -372,6 +373,7 @@ function renderAthletes(athletes) {
               ${metricCard(athlete, 'assists', 'Assistencias')}
               ${metricCard(athlete, 'mvp', 'MVP')}
               ${metricCard(athlete, 'worst', 'Pior em campo')}
+              ${metricCard(athlete, 'defender', 'Melhor Defensor')}
             </div>
             <div class="athlete-danger-row">
               <button class="delete-athlete-btn" type="button" data-action="delete-athlete" data-id="${athlete.id}">Remover atleta</button>

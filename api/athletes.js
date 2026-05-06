@@ -57,6 +57,7 @@ module.exports = async (req, res) => {
         games: 0,
         mvp: 0,
         worst: 0,
+        defender: 0,
         createdAt: new Date().toISOString()
       });
 
@@ -68,7 +69,8 @@ module.exports = async (req, res) => {
           assists: 0,
           games: 0,
           mvp: 0,
-          worst: 0
+          worst: 0,
+          defender: 0
         }
       });
       return;
@@ -120,7 +122,7 @@ module.exports = async (req, res) => {
         return;
       }
 
-      const allowed = new Set(['goals', 'assists', 'games', 'mvp', 'worst']);
+      const allowed = new Set(['goals', 'assists', 'games', 'mvp', 'worst', 'defender']);
       if (!allowed.has(field)) {
         sendJson(res, 400, { error: 'Campo invalido para incremento.' });
         return;
