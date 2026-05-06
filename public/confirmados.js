@@ -207,11 +207,21 @@ function normalizeNames(text) {
   String(text || '')
     .split(/\r?\n/)
     .forEach((line) => {
-      const raw = String(line || '');
-      const match = raw.match(/^\s*\d+\s*[-.)–—]\s*(.+)$/u);
-      const candidate = match ? match[1] : raw;
+      const raw = String(line || '').trim();
+      
+      // Ignorar linhas vazias, que começam com FUT ou que não combinam com o padrão
+      if (!raw || raw.toUpperCase().startsWith('FUT')) {
+        return;
+      }
+      
+      // Aceitar apenas linhas no formato: número - nome
+      const match = raw.match(/^\d+\s*-\s*(.+)$/);
+      if (!match) {
+        return;
+      }
+      
       const name = sanitizeAthleteName(
-        candidate
+        match[1]
           .replace(/\(\s*avulso\s*\)/gi, '')
           .replace(/\s{2,}/g, ' ')
           .trim()
