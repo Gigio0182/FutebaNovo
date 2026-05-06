@@ -1189,7 +1189,7 @@ confirmadosListEl.addEventListener('click', (event) => {
             mvpName,
             worstName,
             defenderName
-          })\n        });
+          })
         });
 
         clearFinalizeDraft(date);
