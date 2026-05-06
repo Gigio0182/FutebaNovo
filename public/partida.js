@@ -141,7 +141,7 @@ function buildRosterOptions(teamKey, names, selectedNames, blockedNameKeys = new
       <label class="partidas-roster-option ${blockedByOtherTeam ? 'is-disabled' : ''}">
         <input type="checkbox" data-role="${role}" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} ${inputDisabled ? 'disabled' : ''} ${disabledReason} />
         <span>${escapeHtml(name)}</span>
-        ${blockedByOtherTeam ? '<small class="partidas-roster-note">(no outro time)</small>' : ''}
+        ${blockedByOtherTeam ? '<small class="partidas-roster-note"> - Atleta já selecionado no outro time</small>' : ''}
       </label>
     `;
   }).join('') || '<p class="partidas-setup-empty">Nenhum atleta disponivel.</p>';
@@ -316,7 +316,7 @@ function refreshRosterPanels() {
           label.classList.toggle('is-disabled', blockedByOtherTeam);
         }
         if (note) {
-          note.textContent = blockedByOtherTeam ? '(no outro time)' : '';
+          note.textContent = blockedByOtherTeam ? ' - Atleta já selecionado no outro time' : '';
         }
       });
     }
