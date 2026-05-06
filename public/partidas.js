@@ -489,13 +489,7 @@ function getPontosForAthlete(athleteName) {
     return 0;
   }
 
-  return calcularPontos({
-    games: athlete.games,
-    goals: athlete.goals,
-    assists: athlete.assists,
-    mvp: athlete.mvp,
-    worst: athlete.worst
-  });
+  return Number(athlete.points || athlete.pontos || 0);
 }
 
 function buildSummulaEventLines(record) {
