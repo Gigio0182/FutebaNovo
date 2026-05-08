@@ -514,7 +514,6 @@ rootEl.addEventListener('submit', async (event) => {
 
     setupDraft = null;
     clearSetupDraftStorage();
-    await loadRecord();
     localStorage.setItem(
       PARTIDAS_UPDATE_KEY,
       JSON.stringify({ ts: Date.now(), group: GROUP_VALUE || '', date: currentDate, action: submitAction })

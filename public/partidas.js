@@ -15,7 +15,6 @@ const AUTO_REFRESH_MS = 120000;
 
 let isLoadingRecords = false;
 let recordsCache = [];
-let rankingCache = [];
 let goalDialog = null;
 let goalDialogState = null;
 let openFinishedMatchDetails = new Set();
@@ -295,6 +294,44 @@ function getRecordByDate(date) {
   return recordsCache.find((record) => String(record.date || '') === String(date || '')) || null;
 }
 
+function sortRecordsByDateDesc(records) {
+  return [...records].sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')));
+}
+
+function upsertRecord(nextRecord) {
+  if (!nextRecord || !nextRecord.date) {
+    return null;
+  }
+
+  const index = recordsCache.findIndex((record) => String(record.date || '') === String(nextRecord.date || ''));
+  if (index >= 0) {
+    const nextRecords = [...recordsCache];
+    nextRecords[index] = {
+      ...recordsCache[index],
+      ...nextRecord
+    };
+    recordsCache = sortRecordsByDateDesc(nextRecords);
+  } else {
+    recordsCache = sortRecordsByDateDesc([...recordsCache, nextRecord]);
+  }
+
+  renderRecords(recordsCache);
+  return getRecordByDate(nextRecord.date);
+}
+
+function patchRecord(date, patch) {
+  const current = getRecordByDate(date);
+  if (!current) {
+    return null;
+  }
+
+  return upsertRecord({
+    ...current,
+    ...patch,
+    date: current.date
+  });
+}
+
 function saveFinalizeDrafts() {
   try {
     localStorage.setItem(
@@ -541,16 +578,6 @@ function joinSummaryParts(parts) {
 
 function formatContributionLabel(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function calcularPontos({ games = 0, goals = 0, assists = 0, mvp = 0, worst = 0 }) {
-  const pontos =
-    (Number(games) * 0.5) +
-    (Number(assists) * 1.5) +
-    (Number(goals) * 2.5) +
-    (Number(mvp) * 3) -
-    (Number(worst) * 0.5);
-  return Math.max(0, Math.round(pontos * 100) / 100);
 }
 
 function buildSummulaEventLines(record) {
@@ -1154,7 +1181,7 @@ confirmadosListEl.addEventListener('click', (event) => {
     event.preventDefault();
     (async () => {
       try {
-        await request(buildApiUrl(), {
+        const data = await request(buildApiUrl(), {
           method: 'PUT',
           body: JSON.stringify({
             action,
@@ -1162,8 +1189,11 @@ confirmadosListEl.addEventListener('click', (event) => {
           })
         });
 
+        patchRecord(date, {
+          matchTimer: data.matchTimer
+        });
+
         notifyPartidasUpdate(date, action);
-        await loadRecords();
         setStatus(action === 'pause-match-timer' ? 'Cronometro pausado.' : 'Cronometro reiniciado.');
       } catch (error) {
         setStatus(error.message, true);
@@ -1201,7 +1231,7 @@ confirmadosListEl.addEventListener('click', (event) => {
     event.preventDefault();
     (async () => {
       try {
-        await request(buildApiUrl(), {
+        const data = await request(buildApiUrl(), {
           method: 'PUT',
           body: JSON.stringify({
             action: 'remove-goal',
@@ -1212,8 +1242,16 @@ confirmadosListEl.addEventListener('click', (event) => {
           })
         });
 
+        patchRecord(date, {
+          events: data.events,
+          scoreA: data.scoreA,
+          scoreB: data.scoreB,
+          goalsByName: data.goalsByName,
+          goalsByTeamName: data.goalsByTeamName,
+          assistsByName: data.assistsByName,
+          assistsByTeamName: data.assistsByTeamName
+        });
         notifyPartidasUpdate(date, 'remove-goal');
-        await loadRecords();
         setStatus('Registro removido com sucesso.');
       } catch (error) {
         setStatus(error.message, true);
@@ -1247,8 +1285,25 @@ confirmadosListEl.addEventListener('click', (event) => {
         });
 
         clearFinalizeDraft(date);
+        patchRecord(date, {
+          matchStatus: 'not-started',
+          scoreA: 0,
+          scoreB: 0,
+          events: [],
+          goalsByName: {},
+          assistsByName: {},
+          goalsByTeamName: { A: {}, B: {} },
+          assistsByTeamName: { A: {}, B: {} },
+          mvpByName: {},
+          worstByName: {},
+          defenderByName: {},
+          matchTimer: {
+            status: 'paused',
+            elapsedSeconds: 0,
+            startedAt: ''
+          }
+        });
         notifyPartidasUpdate(date, 'reset-match');
-        await loadRecords();
         setStatus('Partida resetada com sucesso.');
       } catch (error) {
         setStatus(error.message, true);
@@ -1281,7 +1336,7 @@ confirmadosListEl.addEventListener('click', (event) => {
     event.preventDefault();
     (async () => {
       try {
-        await request(buildApiUrl(), {
+        const data = await request(buildApiUrl(), {
           method: 'PUT',
           body: JSON.stringify({
             action: 'finalize-match',
@@ -1297,8 +1352,20 @@ confirmadosListEl.addEventListener('click', (event) => {
         });
 
         clearFinalizeDraft(date);
+        patchRecord(date, {
+          matchStatus: data.matchStatus,
+          teamNameA: data.teamNameA,
+          teamNameB: data.teamNameB,
+          teamA: data.teamA,
+          teamB: data.teamB,
+          mvpByName: data.mvpByName,
+          worstByName: data.worstByName,
+          defenderByName: data.defenderByName,
+          matchTimer: data.matchTimer,
+          scoreA: data.scoreA,
+          scoreB: data.scoreB
+        });
         notifyPartidasUpdate(date, 'finalize-match');
-        await loadRecords();
         setStatus('Partida finalizada com sucesso.');
       } catch (error) {
         setStatus(error.message, true);
@@ -1408,7 +1475,7 @@ document.addEventListener('submit', async (event) => {
   const assistName = ownGoal || !(assistSelect instanceof HTMLSelectElement) ? '' : String(assistSelect.value || '').trim();
 
   try {
-    await request(buildApiUrl(), {
+    const data = await request(buildApiUrl(), {
       method: 'PUT',
       body: JSON.stringify({
         action: 'add-goal',
@@ -1420,30 +1487,22 @@ document.addEventListener('submit', async (event) => {
       })
     });
 
+    patchRecord(goalDialogState.date, {
+      events: data.events,
+      scoreA: data.scoreA,
+      scoreB: data.scoreB,
+      goalsByName: data.goalsByName,
+      goalsByTeamName: data.goalsByTeamName,
+      assistsByName: data.assistsByName,
+      assistsByTeamName: data.assistsByTeamName
+    });
     notifyPartidasUpdate(goalDialogState.date, 'add-goal');
     closeGoalDialog();
-    await loadRecords();
     setStatus('Gol registrado com sucesso.');
   } catch (error) {
     setStatus(error.message, true);
   }
 });
-
-async function loadRanking() {
-  try {
-    const params = new URLSearchParams();
-    if (GROUP_VALUE) {
-      params.set('group', GROUP_VALUE);
-    }
-
-    const url = params.toString() ? `/api/ranking?${params.toString()}` : '/api/ranking';
-    const data = await request(url);
-    rankingCache = data.ranking || [];
-  } catch (error) {
-    console.error('Erro ao carregar ranking:', error);
-    rankingCache = [];
-  }
-}
 
 async function loadRecords() {
   if (isLoadingRecords) {
@@ -1482,7 +1541,7 @@ function isSameGroupUpdate(payload) {
 
 function startAutoRefresh() {
   window.setInterval(() => {
-    Promise.all([loadRanking(), loadRecords()]).catch(handleAutoRefreshError);
+    loadRecords().catch(handleAutoRefreshError);
   }, AUTO_REFRESH_MS);
 }
 
@@ -1554,7 +1613,7 @@ if (importClearFormBtn) {
 
 loadFinalizeDrafts();
 
-Promise.all([loadRanking(), loadRecords()]).then(() => {
+loadRecords().then(() => {
   setStatus('Partidas carregadas.');
   startMatchTimerTicker();
 }).catch((error) => {
@@ -1566,7 +1625,7 @@ window.addEventListener('storage', (event) => {
     try {
       const payload = JSON.parse(event.newValue);
       if (isSameGroupUpdate(payload)) {
-        Promise.all([loadRanking(), loadRecords()]).catch(handleAutoRefreshError);
+        loadRecords().catch(handleAutoRefreshError);
       }
     } catch {
       // Ignore malformed payloads.

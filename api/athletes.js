@@ -3,6 +3,7 @@ const { handleOptions, parseBody, sendJson } = require('./_lib/http');
 const { requireAuth } = require('./_lib/auth');
 const { getAthletesCollectionName } = require('./_lib/group');
 const { sanitizeAthleteName, normalizeNameKey } = require('./_lib/names');
+const cache = require('./_lib/cache');
 
 module.exports = async (req, res) => {
   if (handleOptions(req, res)) {
@@ -11,19 +12,25 @@ module.exports = async (req, res) => {
 
   try {
     const db = getDb();
-    const athletesCollection = db.collection(getAthletesCollectionName(req));
+    const collectionName = getAthletesCollectionName(req);
+    const athletesCollection = db.collection(collectionName);
 
     if (req.method === 'GET') {
       if (!requireAuth(req, res)) {
         return;
       }
 
-      const snapshot = await athletesCollection.orderBy('name', 'asc').get();
-
-      const athletes = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      let athletes = cache.getAthletes(collectionName);
+      if (!athletes) {
+        const snapshot = await athletesCollection.orderBy('name', 'asc').get();
+        athletes = cache.setAthletes(
+          collectionName,
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+        );
+      }
 
       sendJson(res, 200, { athletes });
       return;
@@ -43,13 +50,25 @@ module.exports = async (req, res) => {
       }
 
       const duplicateKey = normalizeNameKey(name);
-      const existingSnapshot = await athletesCollection.limit(1000).get();
-      const existingDuplicate = existingSnapshot.docs.find((doc) => normalizeNameKey((doc.data() || {}).name) === duplicateKey);
+      let athletes = cache.getAthletes(collectionName);
+      if (!athletes) {
+        const existingSnapshot = await athletesCollection.orderBy('name', 'asc').get();
+        athletes = cache.setAthletes(
+          collectionName,
+          existingSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+        );
+      }
+
+      const existingDuplicate = athletes.find((athlete) => normalizeNameKey((athlete || {}).name) === duplicateKey);
       if (existingDuplicate) {
         sendJson(res, 409, { error: 'Ja existe um atleta cadastrado com esse nome.' });
         return;
       }
 
+      const createdAt = new Date().toISOString();
       const created = await athletesCollection.add({
         name,
         goals: 0,
@@ -58,7 +77,19 @@ module.exports = async (req, res) => {
         mvp: 0,
         worst: 0,
         defender: 0,
-        createdAt: new Date().toISOString()
+        createdAt
+      });
+
+      cache.upsertAthlete(collectionName, {
+        id: created.id,
+        name,
+        goals: 0,
+        assists: 0,
+        games: 0,
+        mvp: 0,
+        worst: 0,
+        defender: 0,
+        createdAt
       });
 
       sendJson(res, 201, {
@@ -87,6 +118,7 @@ module.exports = async (req, res) => {
       const nextName = sanitizeAthleteName(body.name || '');
       const deltaRaw = Number(body.delta);
       const delta = Number.isFinite(deltaRaw) && deltaRaw !== 0 ? deltaRaw : 1;
+      const now = new Date().toISOString();
 
       if (!id) {
         sendJson(res, 400, { error: 'ID do atleta e obrigatorio.' });
@@ -103,8 +135,19 @@ module.exports = async (req, res) => {
         }
 
         const duplicateKey = normalizeNameKey(nextName);
-        const existingSnapshot = await athletesCollection.limit(1000).get();
-        const existingDuplicate = existingSnapshot.docs.find((doc) => doc.id !== id && normalizeNameKey((doc.data() || {}).name) === duplicateKey);
+        let athletes = cache.getAthletes(collectionName);
+        if (!athletes) {
+          const existingSnapshot = await athletesCollection.orderBy('name', 'asc').get();
+          athletes = cache.setAthletes(
+            collectionName,
+            existingSnapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data()
+            }))
+          );
+        }
+
+        const existingDuplicate = athletes.find((athlete) => athlete.id !== id && normalizeNameKey((athlete || {}).name) === duplicateKey);
         if (existingDuplicate) {
           sendJson(res, 409, { error: 'Ja existe um atleta cadastrado com esse nome.' });
           return;
@@ -113,10 +156,17 @@ module.exports = async (req, res) => {
         await docRef.set(
           {
             name: nextName,
-            updatedAt: new Date().toISOString()
+            updatedAt: now
           },
           { merge: true }
         );
+
+        cache.upsertAthlete(collectionName, {
+          id,
+          ...currentSnap.data(),
+          name: nextName,
+          updatedAt: now
+        });
 
         sendJson(res, 200, { ok: true, name: nextName });
         return;
@@ -143,10 +193,17 @@ module.exports = async (req, res) => {
       await docRef.set(
         {
           [field]: nextValue,
-          updatedAt: new Date().toISOString()
+          updatedAt: now
         },
         { merge: true }
       );
+
+      cache.upsertAthlete(collectionName, {
+        id,
+        ...current,
+        [field]: nextValue,
+        updatedAt: now
+      });
 
       sendJson(res, 200, { ok: true, field, value: nextValue });
       return;
@@ -175,6 +232,7 @@ module.exports = async (req, res) => {
       }
 
       await docRef.delete();
+      cache.removeAthlete(collectionName, id);
       sendJson(res, 200, { ok: true, deleted: true });
       return;
     }

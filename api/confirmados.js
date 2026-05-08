@@ -3,6 +3,7 @@ const { handleOptions, parseBody, sendJson } = require('./_lib/http');
 const { requireAuth } = require('./_lib/auth');
 const { getAthletesCollectionName, getConfirmadosCollectionName } = require('./_lib/group');
 const { sanitizeAthleteName, normalizeNameKey } = require('./_lib/names');
+const cache = require('./_lib/cache');
 
 function isValidDate(dateText) {
   return /^\d{4}-\d{2}-\d{2}$/.test(dateText);
@@ -361,21 +362,23 @@ async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso
     return;
   }
 
-  const athletesCollection = db.collection(getAthletesCollectionName(req));
-  const snapshot = await athletesCollection.limit(1000).get();
-  const targetKey = normalizeNameKey(athleteName);
-  let targetDoc = null;
+  const collectionName = getAthletesCollectionName(req);
+  const athletesCollection = db.collection(collectionName);
+  let athletes = cache.getAthletes(collectionName);
 
-  snapshot.docs.forEach((doc) => {
-    if (targetDoc) {
-      return;
-    }
-    const data = doc.data() || {};
-    const key = normalizeNameKey(data.name);
-    if (key === targetKey) {
-      targetDoc = { id: doc.id, data };
-    }
-  });
+  if (!athletes) {
+    const snapshot = await athletesCollection.orderBy('name', 'asc').get();
+    athletes = cache.setAthletes(
+      collectionName,
+      snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+    );
+  }
+
+  const targetKey = normalizeNameKey(athleteName);
+  const targetDoc = athletes.find((athlete) => normalizeNameKey((athlete || {}).name) === targetKey) || null;
 
   if (!targetDoc) {
     const created = await athletesCollection.add({
@@ -390,10 +393,23 @@ async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso
       updatedAt: nowIso
     });
 
+    cache.upsertAthlete(collectionName, {
+      id: created.id,
+      name: athleteName,
+      goals: field === 'goals' ? Math.max(0, delta) : 0,
+      assists: field === 'assists' ? Math.max(0, delta) : 0,
+      games: 0,
+      mvp: field === 'mvp' ? Math.max(0, delta) : 0,
+      worst: field === 'worst' ? Math.max(0, delta) : 0,
+      defender: field === 'defender' ? Math.max(0, delta) : 0,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    });
+
     return created.id;
   }
 
-  const currentValue = Number(targetDoc.data[field] || 0);
+  const currentValue = Number(targetDoc[field] || 0);
   const nextValue = Math.max(0, currentValue + delta);
   await athletesCollection.doc(targetDoc.id).set(
     {
@@ -402,6 +418,12 @@ async function incrementAthleteMetric(db, req, athleteName, field, delta, nowIso
     },
     { merge: true }
   );
+
+  cache.upsertAthlete(collectionName, {
+    ...targetDoc,
+    [field]: nextValue,
+    updatedAt: nowIso
+  });
 
   return targetDoc.id;
 }
@@ -436,18 +458,30 @@ async function applySingleChoiceMetricSelection(db, req, metricByName, selectedN
 }
 
 async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
-  const athletesCollection = db.collection(getAthletesCollectionName(req));
-  const athletesSnapshot = await athletesCollection.limit(1000).get();
+  const collectionName = getAthletesCollectionName(req);
+  const athletesCollection = db.collection(collectionName);
+  let athletes = cache.getAthletes(collectionName);
+
+  if (!athletes) {
+    const athletesSnapshot = await athletesCollection.orderBy('name', 'asc').get();
+    athletes = cache.setAthletes(
+      collectionName,
+      athletesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+    );
+  }
 
   const athleteByKey = new Map();
-  athletesSnapshot.docs.forEach((doc) => {
-    const data = doc.data() || {};
+  athletes.forEach((athlete) => {
+    const data = athlete || {};
     const key = normalizeNameKey(data.name);
     if (!key || athleteByKey.has(key)) {
       return;
     }
     athleteByKey.set(key, {
-      ref: athletesCollection.doc(doc.id),
+      ref: athletesCollection.doc(data.id),
       data
     });
   });
@@ -473,6 +507,11 @@ async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
         { merge: true }
       );
       existing.data.games = currentGames + 1;
+      cache.upsertAthlete(collectionName, {
+        ...existing.data,
+        games: currentGames + 1,
+        updatedAt: nowIso
+      });
       continue;
     }
 
@@ -489,9 +528,23 @@ async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
       updatedAt: nowIso
     });
 
+    cache.upsertAthlete(collectionName, {
+      id: created.id,
+      name: displayName,
+      goals: 0,
+      assists: 0,
+      games: 1,
+      mvp: 0,
+      worst: 0,
+      defender: 0,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    });
+
     athleteByKey.set(key, {
       ref: athletesCollection.doc(created.id),
       data: {
+        id: created.id,
         name: displayName,
         goals: 0,
         assists: 0,
@@ -518,6 +571,11 @@ async function syncAthletesGames(db, req, previousNames, nextNames, nowIso) {
       { merge: true }
     );
     existing.data.games = Math.max(0, currentGames - 1);
+    cache.upsertAthlete(collectionName, {
+      ...existing.data,
+      games: Math.max(0, currentGames - 1),
+      updatedAt: nowIso
+    });
   }
 }
 

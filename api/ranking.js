@@ -25,21 +25,24 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const db = getDb();
     const collectionName = getAthletesCollectionName(req);
-    const group = String((req.query && req.query.group) || '').trim();
-    const cacheKey = `athletes:${group}`;
+    let athletes = cache.getAthletes(collectionName);
 
-    let athletesSnap = cache.get('athletes', group);
-    
-    if (!athletesSnap) {
-      athletesSnap = await db.collection(collectionName).limit(1000).get();
-      cache.set('athletes', athletesSnap, group);
+    if (!athletes) {
+      const db = getDb();
+      const athletesSnap = await db.collection(collectionName).limit(1000).get();
+      athletes = cache.setAthletes(
+        collectionName,
+        athletesSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+      );
     }
 
-    const ranking = athletesSnap.docs
-      .map((doc) => {
-        const data = doc.data();
+    const ranking = athletes
+      .map((athlete) => {
+        const data = athlete || {};
         const goals = Number(data.goals || 0);
         const assists = Number(data.assists || 0);
         const games = Number(data.games || 0);
@@ -48,7 +51,7 @@ module.exports = async (req, res) => {
         const defender = Number(data.defender || 0);
 
         return {
-          athleteId: doc.id,
+          athleteId: data.id,
           name: data.name,
           games,
           goals,
