@@ -19,6 +19,28 @@ let recordsCache = [];
 let expandedRecordDate = null;
 let syncInProgress = false;
 
+async function clearConfirmadosApiCache() {
+  if (!('caches' in window)) {
+    return;
+  }
+
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map(async (cacheName) => {
+    const cache = await caches.open(cacheName);
+    const requests = await cache.keys();
+    await Promise.all(requests.map(async (request) => {
+      try {
+        const url = new URL(request.url);
+        if (url.origin === window.location.origin && url.pathname === '/api/confirmados') {
+          await cache.delete(request);
+        }
+      } catch {
+        // Ignore malformed cache entries.
+      }
+    }));
+  }));
+}
+
 function buildApiUrl(extraParams = {}) {
   const params = new URLSearchParams();
   if (GROUP_VALUE) {
@@ -387,10 +409,26 @@ function renderRecords(records) {
     .join('');
 }
 
+function removeRecordFromCache(date) {
+  const targetDate = String(date || '').trim();
+  if (!targetDate) {
+    return;
+  }
+
+  recordsCache = recordsCache.filter((record) => String(record.date || '') !== targetDate);
+  if (expandedRecordDate === targetDate) {
+    expandedRecordDate = null;
+  }
+
+  renderRecords(recordsCache);
+}
+
 async function request(url, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY) || '';
+  const method = String(options.method || 'GET').toUpperCase();
 
   const response = await fetch(url, {
+    cache: method === 'GET' ? 'no-store' : 'no-cache',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -648,8 +686,9 @@ confirmadosListEl.addEventListener('click', async (event) => {
 
     try {
       await request(buildApiUrl({ date }), { method: 'DELETE' });
+      removeRecordFromCache(date);
+      await clearConfirmadosApiCache();
       notifyPartidasUpdate(date, 'delete-record');
-      expandedRecordDate = null;
       await loadRecords();
       setStatus('Lista excluida com sucesso.');
     } catch (error) {
