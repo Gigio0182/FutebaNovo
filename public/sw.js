@@ -77,15 +77,19 @@ self.addEventListener('message', (event) => {
   }
 });
 
+function shouldBypassApiCache(request, url) {
+  return request.cache === 'no-store' || url.searchParams.has('_ts');
+}
+
 async function cacheApiResponse(request, cacheExpiration = 30000) {
   const cache = await caches.open(CACHE_NAME);
   const url = new URL(request.url);
-  const cacheKey = `${request.url}:timestamp`;
+  const bypassCache = shouldBypassApiCache(request, url);
 
   try {
     const response = await fetch(request);
-    
-    if (response.ok) {
+
+    if (!bypassCache && response.ok) {
       const clonedResponse = response.clone();
       const data = await clonedResponse.json();
       const timestampedData = { ...data, __cached_at: Date.now() };
@@ -99,6 +103,10 @@ async function cacheApiResponse(request, cacheExpiration = 30000) {
     
     return response;
   } catch (error) {
+    if (bypassCache) {
+      throw error;
+    }
+
     const cached = await cache.match(request);
     if (cached) {
       try {

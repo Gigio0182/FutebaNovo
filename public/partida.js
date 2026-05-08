@@ -7,9 +7,11 @@ const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
 const PARTIDA_DRAFT_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_partida_draft' : 'app_futeba_partida_draft';
 const currentDate = String(new URLSearchParams(window.location.search).get('date') || '').trim();
+const MOBILE_REFRESH_DEBOUNCE_MS = 1500;
 
 let recordCache = null;
 let setupDraft = null;
+let lastMobileRefreshAt = 0;
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -400,7 +402,9 @@ function renderPage() {
 
 async function request(url, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY) || '';
+  const method = String(options.method || 'GET').toUpperCase();
   const response = await fetch(url, {
+    cache: method === 'GET' ? 'no-store' : 'no-cache',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -429,6 +433,25 @@ async function loadRecord() {
     setupDraft = createSetupDraft(recordCache);
   }
   renderPage();
+}
+
+function shouldRefreshMobileView() {
+  const now = Date.now();
+  if (now - lastMobileRefreshAt < MOBILE_REFRESH_DEBOUNCE_MS) {
+    return false;
+  }
+  lastMobileRefreshAt = now;
+  return true;
+}
+
+function refreshForMobileResume() {
+  if (!currentDate || !shouldRefreshMobileView()) {
+    return;
+  }
+
+  loadRecord().catch((error) => {
+    setStatus(error.message, true);
+  });
 }
 
 rootEl.addEventListener('input', (event) => {
@@ -553,6 +576,18 @@ window.addEventListener('storage', (event) => {
   }
 
   updateCornerAuthButton();
+});
+
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    refreshForMobileResume();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    refreshForMobileResume();
+  }
 });
 
 updateCornerAuthButton();

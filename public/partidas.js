@@ -12,6 +12,7 @@ const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
 const PARTIDAS_FINALIZE_DRAFT_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_finalize_draft' : 'app_futeba_finalize_draft';
 const AUTO_REFRESH_MS = 120000;
+const MOBILE_REFRESH_DEBOUNCE_MS = 1500;
 
 let isLoadingRecords = false;
 let recordsCache = [];
@@ -21,6 +22,7 @@ let openFinishedMatchDetails = new Set();
 let serverClockOffsetMs = 0;
 let finalizeDraftByDate = new Map();
 let pendingRequests = new Map();
+let lastMobileRefreshAt = 0;
 
 function getIsLoggedIn() {
   return Boolean(localStorage.getItem(TOKEN_KEY));
@@ -1064,13 +1066,15 @@ function renderMatchDetails(record) {
 }
 
 async function request(url, options = {}) {
-  if (options.method === 'GET' && pendingRequests.has(url)) {
+  const method = String(options.method || 'GET').toUpperCase();
+  if (method === 'GET' && pendingRequests.has(url)) {
     return pendingRequests.get(url);
   }
 
   const token = localStorage.getItem(TOKEN_KEY) || '';
   const fetchPromise = fetch(url, {
     ...options,
+    cache: method === 'GET' ? 'no-store' : 'no-cache',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -1083,12 +1087,12 @@ async function request(url, options = {}) {
     }
     return data;
   }).finally(() => {
-    if (options.method === 'GET') {
+    if (method === 'GET') {
       pendingRequests.delete(url);
     }
   });
 
-  if (options.method === 'GET') {
+  if (method === 'GET') {
     pendingRequests.set(url, fetchPromise);
   }
 
@@ -1545,6 +1549,23 @@ function startAutoRefresh() {
   }, AUTO_REFRESH_MS);
 }
 
+function shouldRefreshMobileView() {
+  const now = Date.now();
+  if (now - lastMobileRefreshAt < MOBILE_REFRESH_DEBOUNCE_MS) {
+    return false;
+  }
+  lastMobileRefreshAt = now;
+  return true;
+}
+
+function refreshForMobileResume() {
+  if (!shouldRefreshMobileView()) {
+    return;
+  }
+
+  loadRecords().catch(handleAutoRefreshError);
+}
+
 // Import List Dialog Event Listeners
 if (importListBtn) {
   importListBtn.addEventListener('click', openImportListDialog);
@@ -1633,6 +1654,18 @@ window.addEventListener('storage', (event) => {
   }
 
   updateCornerAuthButton();
+});
+
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    refreshForMobileResume();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    refreshForMobileResume();
+  }
 });
 
 startAutoRefresh();

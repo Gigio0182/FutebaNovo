@@ -14,10 +14,12 @@ const QUEUE_KEY = GROUP_VALUE === 'domingo'
 const logoutBtn = document.getElementById('logout-btn');
 const syncStateEl = document.getElementById('sync-state');
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
+const MOBILE_REFRESH_DEBOUNCE_MS = 1500;
 
 let recordsCache = [];
 let expandedRecordDate = null;
 let syncInProgress = false;
+let lastMobileRefreshAt = 0;
 
 async function clearConfirmadosApiCache() {
   if (!('caches' in window)) {
@@ -457,6 +459,25 @@ async function loadRecords() {
   renderRecords(recordsCache);
 }
 
+function shouldRefreshMobileView() {
+  const now = Date.now();
+  if (now - lastMobileRefreshAt < MOBILE_REFRESH_DEBOUNCE_MS) {
+    return false;
+  }
+  lastMobileRefreshAt = now;
+  return true;
+}
+
+function refreshForMobileResume() {
+  if (!shouldRefreshMobileView()) {
+    return;
+  }
+
+  loadRecords().catch((error) => {
+    setStatus(error.message, true);
+  });
+}
+
 function setDefaultDate() {
   const now = new Date();
   const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
@@ -722,6 +743,18 @@ window.addEventListener('online', () => {
 
 window.addEventListener('offline', () => {
   updateSyncState();
+});
+
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    refreshForMobileResume();
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    refreshForMobileResume();
+  }
 });
 
 setDefaultDate();
