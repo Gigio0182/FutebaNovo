@@ -1,6 +1,12 @@
 const confirmadosListEl = document.getElementById('confirmados-list');
 const statusEl = document.getElementById('status');
 const cornerAuthBtn = document.getElementById('corner-auth-btn');
+const importListBtn = document.getElementById('import-list-btn');
+const importListDialog = document.getElementById('import-list-dialog');
+const importListForm = document.getElementById('import-list-form');
+const importMatchDateInput = document.getElementById('import-match-date');
+const importConfirmedNamesInput = document.getElementById('import-confirmed-names');
+const importClearFormBtn = document.getElementById('import-clear-form-btn');
 const GROUP_VALUE = document.body.dataset.group || '';
 const TOKEN_KEY = GROUP_VALUE === 'domingo' ? 'app_futeba_domingo_token' : 'app_futeba_token';
 const PARTIDAS_UPDATE_KEY = 'app_futeba_partidas_update';
@@ -46,6 +52,60 @@ function buildApiUrl(extraParams = {}) {
 
   const query = params.toString();
   return query ? `/api/confirmados?${query}` : '/api/confirmados';
+}
+
+function sanitizeAthleteName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/[\u0000-\u001F\u007F\u00AD\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function normalizeNameKey(value) {
+  return sanitizeAthleteName(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeNames(text) {
+  const uniqueByKey = new Map();
+
+  String(text || '')
+    .split(/\r?\n/)
+    .forEach((line) => {
+      const raw = String(line || '').trim();
+      
+      // Ignorar linhas vazias, que começam com FUT ou que não combinam com o padrão
+      if (!raw || raw.toUpperCase().startsWith('FUT')) {
+        return;
+      }
+      
+      // Aceitar apenas linhas no formato: número - nome
+      const match = raw.match(/^\d+\s*-\s*(.+)$/);
+      if (!match) {
+        return;
+      }
+      
+      const name = sanitizeAthleteName(
+        match[1]
+          .replace(/\(\s*avulso\s*\)/gi, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      );
+      const key = normalizeNameKey(name);
+
+      if (!key || uniqueByKey.has(key)) {
+        return;
+      }
+
+      uniqueByKey.set(key, name);
+    });
+
+  return Array.from(uniqueByKey.values());
 }
 
 function escapeHtml(value) {
@@ -791,6 +851,36 @@ function closeGoalDialog() {
   goalDialogState = null;
 }
 
+function setDefaultImportDate() {
+  const now = new Date();
+  const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+  importMatchDateInput.value = localIso;
+}
+
+function resetImportForm() {
+  setDefaultImportDate();
+  importConfirmedNamesInput.value = '';
+}
+
+function openImportListDialog() {
+  if (!importListDialog) {
+    return;
+  }
+  
+  resetImportForm();
+  if (typeof importListDialog.showModal === 'function') {
+    importListDialog.showModal();
+  }
+}
+
+function closeImportListDialog() {
+  if (importListDialog && typeof importListDialog.close === 'function' && importListDialog.open) {
+    importListDialog.close();
+  }
+}
+
 function syncGoalDialogFields() {
   if (!goalDialog || !goalDialogState) {
     return;
@@ -1394,6 +1484,72 @@ function startAutoRefresh() {
   window.setInterval(() => {
     Promise.all([loadRanking(), loadRecords()]).catch(handleAutoRefreshError);
   }, AUTO_REFRESH_MS);
+}
+
+// Import List Dialog Event Listeners
+if (importListBtn) {
+  importListBtn.addEventListener('click', openImportListDialog);
+}
+
+if (importListDialog) {
+  const closeBtn = importListDialog.querySelector('[data-action="close-import-dialog"]');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeImportListDialog);
+  }
+}
+
+if (importListForm) {
+  importListForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    try {
+      const date = String(importMatchDateInput.value || '').trim();
+      const names = normalizeNames(importConfirmedNamesInput.value);
+
+      if (!date) {
+        setStatus('Informe a data da partida.', true);
+        return;
+      }
+
+      if (!names.length) {
+        setStatus('Cole ao menos um nome na lista.', true);
+        return;
+      }
+
+      await request(buildApiUrl(), {
+        method: 'POST',
+        body: JSON.stringify({ date, names })
+      });
+
+      try {
+        localStorage.setItem(
+          PARTIDAS_UPDATE_KEY,
+          JSON.stringify({
+            ts: Date.now(),
+            group: GROUP_VALUE || '',
+            date: String(date || ''),
+            action: 'save-list'
+          })
+        );
+      } catch {
+        // Silent fail: localStorage may be unavailable in private contexts.
+      }
+
+      resetImportForm();
+      closeImportListDialog();
+      await loadRecords();
+      setStatus('Lista de confirmados salva com sucesso. Se a data ja existia, a lista foi atualizada.');
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  });
+}
+
+if (importClearFormBtn) {
+  importClearFormBtn.addEventListener('click', () => {
+    resetImportForm();
+    setStatus('Formulario limpo.');
+  });
 }
 
 loadFinalizeDrafts();

@@ -712,10 +712,6 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      if (!requireAuth(req, res)) {
-        return;
-      }
-
       const body = await parseBody(req);
       const date = String(body.date || '').trim();
       const names = normalizeNames(body.names);
