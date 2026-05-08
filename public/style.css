@@ -75,6 +75,7 @@
 .ranking-hero {
   position: relative;
   padding-right: 4.5rem;
+  padding-left: 4.5rem;
 }
 
 .help-dialog {
@@ -1959,6 +1960,7 @@ textarea {
 
   .ranking-hero {
     padding-right: 1.4rem;
+    padding-left: 1.4rem;
     padding-top: 3.6rem;
   }
 
@@ -1972,19 +1974,23 @@ textarea {
     font-size: 1.45rem;
   }
 
-  #import-list-btn {
+  .corner-import-btn {
     left: 0.8rem;
     right: auto;
     background: linear-gradient(135deg, #10b981 0%, #0f766e 100%);
     box-shadow: 0 8px 16px rgba(5, 150, 105, 0.28);
+    min-width: 90px;
+    height: 2.6rem;
+    padding: 0 0.75rem;
+    font-size: 0.85rem;
   }
 
-  #import-list-btn:hover {
+  .corner-import-btn:hover {
     box-shadow: 0 12px 20px rgba(5, 150, 105, 0.35);
   }
 }
 
-#import-list-btn {
+.corner-import-btn {
   position: absolute;
   top: 1rem;
   left: 1rem;
@@ -2004,9 +2010,11 @@ textarea {
   box-shadow: 0 10px 22px rgba(5, 150, 105, 0.35);
   z-index: 10;
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  cursor: pointer;
+  border: none;
 }
 
-#import-list-btn:hover {
+.corner-import-btn:hover {
   transform: translateY(-1px) scale(1.03);
   box-shadow: 0 14px 26px rgba(5, 150, 105, 0.44);
   filter: brightness(1.06);
