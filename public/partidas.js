@@ -1505,8 +1505,8 @@ document.addEventListener('submit', async (event) => {
   }
 });
 
-async function loadRecords() {
-  if (isLoadingRecords) {
+async function loadRecords(force = false) {
+  if (isLoadingRecords && !force) {
     return;
   }
 
@@ -1614,7 +1614,7 @@ if (importListForm) {
 
       resetImportForm();
       closeImportListDialog();
-      await loadRecords();
+      await loadRecords(true);
       setStatus('Lista de confirmados salva com sucesso. Se a data ja existia, a lista foi atualizada.');
     } catch (error) {
       setStatus(error.message, true);
@@ -1643,7 +1643,7 @@ window.addEventListener('storage', (event) => {
     try {
       const payload = JSON.parse(event.newValue);
       if (isSameGroupUpdate(payload)) {
-        loadRecords().catch(handleAutoRefreshError);
+        loadRecords(true).catch(handleAutoRefreshError);
       }
     } catch {
       // Ignore malformed payloads.
