@@ -70,7 +70,7 @@ module.exports = async (req, res) => {
         if (b.defender !== a.defender) return b.defender - a.defender;
         if (b.games !== a.games) return b.games - a.games;
         if (a.worst !== b.worst) return a.worst - b.worst;
-        return a.name.localeCompare(b.name, 'pt-BR');
+        return String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR');
       });
 
     sendJson(res, 200, { ranking });
