@@ -20,6 +20,7 @@
           <a class="btn secondary" href="/domingo/melhores-defensores">Melhores Defensores</a>
           <a class="btn secondary" href="/domingo/participacoes">Participações</a>
         </div>
+        <button id="import-list-btn" class="corner-import-btn" type="button" title="Importar lista da semana" aria-label="Importar lista da semana">Importar Lista</button>
         <a id="corner-auth-btn" class="corner-login-btn" href="/domingo/athletes" title="Acessar área de login" aria-label="Acessar área de login">Login</a>
       </header>
 
@@ -30,6 +31,36 @@
 
       <p id="status" class="status" aria-live="polite"></p>
     </main>
+
+    <dialog id="import-list-dialog" class="help-dialog">
+      <form id="import-list-form" class="help-dialog-content">
+        <div class="import-list-header">
+          <div>
+            <h2>Importar Lista da Semana</h2>
+            <p class="help-dialog-subtitle">Cole a lista de atletas confirmados para a partida.</p>
+          </div>
+          <button class="import-list-close" type="button" data-action="close-import-dialog" aria-label="Fechar">&times;</button>
+        </div>
+
+        <label class="confirmados-field confirmados-date-field">
+          Data da partida
+          <input id="import-match-date" type="date" required />
+        </label>
+        <label class="confirmados-field">
+          Lista de nomes (1 por linha)
+          <textarea id="import-confirmed-names" rows="8" placeholder="Exemplo:
+1. Joao
+2. Carlos
+3. Matheus" required></textarea>
+        </label>
+        <p class="confirmados-hint">Linhas que contiverem "(avulso)" serao ignoradas automaticamente.</p>
+        
+        <div class="import-list-actions">
+          <button class="btn" type="submit">Salvar Confirmados</button>
+          <button id="import-clear-form-btn" class="btn secondary" type="button">Limpar Formulario</button>
+        </div>
+      </form>
+    </dialog>
 
     <script src="/partidas.js"></script>
     <script src="/pwa.js"></script>
