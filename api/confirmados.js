@@ -101,9 +101,12 @@ function normalizeNames(rawNames) {
   const names = lines
     .map((line) => {
       const text = String(line || '');
-      // Aceita: 1- geo, 1 - geo, 1. geo, 1: geo, 1) geo, 1, geo, etc
-      const match = text.match(/^\s*\d+\s*[-–—.:,;)]\s*(.+)$/u);
-      const candidate = match ? match[1] : text;
+      // Aceita qualquer separador depois do número (-, ., :, etc)
+      let candidate = text;
+      const match = text.match(/^\s*\d+\s*\W\s*(.+)$/);
+      if (match) {
+        candidate = match[1];
+      }
 
       return sanitizeAthleteName(candidate
         .replace(/\(\s*avulso\s*\)/gi, '')
