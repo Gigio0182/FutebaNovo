@@ -80,19 +80,16 @@ function normalizeNames(text) {
     .forEach((line) => {
       const raw = String(line || '').trim();
       
-      // Ignorar linhas vazias, que começam com FUT ou que não combinam com o padrão
-      if (!raw || raw.toUpperCase().startsWith('FUT')) {
+      if (!raw) {
         return;
       }
       
-      // Aceitar apenas linhas no formato: número - nome
-      const match = raw.match(/^\d+\s*-\s*(.+)$/);
-      if (!match) {
-        return;
-      }
-      
+      // Tentar extrair nome do formato: número - nome
+      const match = raw.match(/^\s*\d+\s*[-–—]\s*(.+)$/u);
+      const candidate = match ? match[1] : raw;
+
       const name = sanitizeAthleteName(
-        match[1]
+        candidate
           .replace(/\(\s*avulso\s*\)/gi, '')
           .replace(/\s{2,}/g, ' ')
           .trim()
