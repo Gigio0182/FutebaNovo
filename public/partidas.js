@@ -84,8 +84,9 @@ function normalizeNames(text) {
         return;
       }
       
-      // Tentar extrair nome do formato: número - nome
-      const match = raw.match(/^\s*\d+\s*[-–—]\s*(.+)$/u);
+      // Tentar extrair nome do formato: número [separador] nome
+      // Aceita: 1- geo, 1 - geo, 1. geo, 1: geo, 1) geo, 1, geo, etc
+      const match = raw.match(/^\s*\d+\s*[-–—.:,;)]\s*(.+)$/u);
       const candidate = match ? match[1] : raw;
 
       const name = sanitizeAthleteName(

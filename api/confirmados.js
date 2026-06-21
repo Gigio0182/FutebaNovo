@@ -101,7 +101,8 @@ function normalizeNames(rawNames) {
   const names = lines
     .map((line) => {
       const text = String(line || '');
-      const match = text.match(/^\s*\d+\s*[-–—]\s*(.+)$/u);
+      // Aceita: 1- geo, 1 - geo, 1. geo, 1: geo, 1) geo, 1, geo, etc
+      const match = text.match(/^\s*\d+\s*[-–—.:,;)]\s*(.+)$/u);
       const candidate = match ? match[1] : text;
 
       return sanitizeAthleteName(candidate
