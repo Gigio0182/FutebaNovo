@@ -18,7 +18,7 @@ async function loadBoard() {
 
     const rows = (data.ranking || []).sort((a, b) => {
       if (Number(b.defender || 0) !== Number(a.defender || 0)) return Number(b.defender || 0) - Number(a.defender || 0);
-      return a.name.localeCompare(b.name, 'pt-BR');
+      return String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR');
     });
 
     const filteredRows = onlyWithDefender.checked

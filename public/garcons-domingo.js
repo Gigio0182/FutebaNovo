@@ -18,7 +18,7 @@ async function loadBoard() {
 
     const rows = (data.ranking || []).sort((a, b) => {
       if (b.assists !== a.assists) return b.assists - a.assists;
-      return a.name.localeCompare(b.name, 'pt-BR');
+      return String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR');
     });
 
     const filteredRows = onlyWithAssists.checked

@@ -67,7 +67,7 @@ function renderRanking() {
   const sorted = [...rankingCache].map((row) => ({
     ...row,
     pontos: calcularPontos(row)
-  })).sort((a, b) => b.pontos - a.pontos || a.name.localeCompare(b.name, 'pt-BR'));
+  })).sort((a, b) => b.pontos - a.pontos || String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
 
   const rankedRows = sorted.map((row, index) => ({
     ...row,
